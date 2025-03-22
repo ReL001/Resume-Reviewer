@@ -97,68 +97,10 @@ const Pricing = () => {
   };
 
   return (
-    <Container maxW="container.xl" py={20}>
-      <VStack spacing={8} textAlign="center">
-        <Heading>Simple, Transparent Pricing</Heading>
-        <Text fontSize="xl" color="gray.600" maxW="2xl">
-          Choose the plan that best fits your needs. All plans include our core features,
-          with premium features available for paid users.
-        </Text>
-      </VStack>
-
-      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={8} mt={12}>
-        <PricingCard
-          title="Free"
-          price="$0"
-          features={[
-            'Basic resume generation',
-            'Basic cover letter generation',
-            'Standard templates',
-            'PDF download',
-            'Email support',
-          ]}
-          onSubscribe={() => handleSubscribe('free')}
-        />
-
-        <PricingCard
-          title="Pro"
-          price="$19"
-          features={[
-            'Advanced resume generation',
-            'Advanced cover letter generation',
-            'All templates',
-            'AI-powered optimization',
-            'Priority support',
-            'Unlimited downloads',
-            'Resume analytics',
-          ]}
-          isPopular
-          onSubscribe={() => handleSubscribe('pro')}
-        />
-
-        <PricingCard
-          title="Enterprise"
-          price="$49"
-          features={[
-            'Everything in Pro',
-            'Custom templates',
-            'API access',
-            'Team collaboration',
-            'Dedicated support',
-            'Advanced analytics',
-            'Custom branding',
-          ]}
-          onSubscribe={() => handleSubscribe('enterprise')}
-        />
-      </SimpleGrid>
-
-      <Box mt={12} textAlign="center">
-        <Text fontSize="lg" color="gray.600">
-          Need a custom plan? Contact us for enterprise solutions.
-        </Text>
-        <Button mt={4} variant="outline" colorScheme="blue">
-          Contact Sales
-        </Button>
+    <Container maxW="container.xl" py={10}>
+      <Box>
+        <Heading mb={4}>Pricing</Heading>
+        <Text>Choose the plan that best fits your needs.</Text>
       </Box>
     </Container>
   );

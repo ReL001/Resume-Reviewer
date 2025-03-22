@@ -9,7 +9,7 @@ import {
   Icon,
   useColorModeValue,
 } from '@chakra-ui/react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { FaFileAlt, FaEnvelope, FaMagic, FaDownload } from 'react-icons/fa';
 
 const Feature = ({ icon, title, text }: { icon: any; title: string; text: string }) => {
@@ -24,6 +24,7 @@ const Feature = ({ icon, title, text }: { icon: any; title: string; text: string
 
 const Home = () => {
   const bgColor = useColorModeValue('gray.50', 'gray.900');
+  const navigate = useNavigate();
 
   return (
     <Box>
@@ -31,21 +32,19 @@ const Home = () => {
       <Box bg={bgColor} py={20}>
         <Container maxW="container.xl">
           <VStack spacing={8} textAlign="center">
-            <Heading size="2xl">
-              Create Professional Resumes & Cover Letters with AI
-            </Heading>
-            <Text fontSize="xl" color="gray.600" maxW="2xl">
-              Generate stunning resumes and cover letters in minutes using our AI-powered platform.
-              Stand out to employers with professionally crafted documents.
+            <Heading size="2xl">AI-Powered Resume Generator</Heading>
+            <Text fontSize="xl">
+              Create professional resumes and cover letters with the power of AI
             </Text>
-            <Button
-              as={RouterLink}
-              to="/resume-builder"
-              size="lg"
-              colorScheme="blue"
-            >
-              Get Started
-            </Button>
+            <Box>
+              <Button
+                colorScheme="blue"
+                size="lg"
+                onClick={() => navigate('/resume-builder')}
+              >
+                Get Started
+              </Button>
+            </Box>
           </VStack>
         </Container>
       </Box>
