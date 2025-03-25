@@ -12,76 +12,65 @@ export interface SubscriptionPlan {
 
 export const plans: SubscriptionPlan[] = [
   {
-    id: 'price_free',
+    id: 'free',
     name: 'Free',
     price: 0,
-    interval: 'month',
     features: [
-      'Basic resume generation',
-      'Basic cover letter generation',
-      'Standard templates',
-      'PDF download',
-      'Email support',
-    ],
+      'Basic resume analysis',
+      'ATS compatibility check',
+      'One resume template',
+      'PDF export',
+      '2 resume generations per month'
+    ]
   },
   {
-    id: 'price_pro',
+    id: 'pro',
     name: 'Pro',
     price: 19,
-    interval: 'month',
     features: [
-      'Advanced resume generation',
-      'Advanced cover letter generation',
-      'All templates',
-      'AI-powered optimization',
-      'Priority support',
-      'Unlimited downloads',
-      'Resume analytics',
-    ],
+      'All Free features',
+      'Advanced resume analysis',
+      'Unlimited resume generations',
+      '5 premium templates',
+      'Cover letter generation',
+      'Job description matching',
+      'LinkedIn profile optimization'
+    ]
   },
   {
-    id: 'price_enterprise',
+    id: 'enterprise',
     name: 'Enterprise',
     price: 49,
-    interval: 'month',
     features: [
-      'Everything in Pro',
+      'All Pro features',
+      'Priority support',
+      'Bulk resume analysis',
       'Custom templates',
       'API access',
       'Team collaboration',
-      'Dedicated support',
       'Advanced analytics',
-      'Custom branding',
-    ],
-  },
+      'Dedicated account manager'
+    ]
+  }
 ];
 
-export const createCheckoutSession = async (
-  priceId: string,
-  userId: string
-): Promise<string> => {
-  try {
-    const response = await fetch('/api/create-checkout-session', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        priceId,
-        userId,
-      }),
-    });
+export const getSubscriptionDetails = async (userId: string) => {
+  // Mock implementation - in a real app, this would fetch from your backend
+  return {
+    plan: 'free',
+    status: 'active',
+    nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    features: plans[0].features
+  };
+};
 
-    if (!response.ok) {
-      throw new Error('Failed to create checkout session');
-    }
-
-    const { sessionId } = await response.json();
-    return sessionId;
-  } catch (error) {
-    console.error('Error creating checkout session:', error);
-    throw error;
-  }
+export const createCheckoutSession = async (priceId: string, customerId: string) => {
+  // Mock implementation
+  console.log(`Creating checkout session for price ${priceId} and customer ${customerId}`);
+  return {
+    sessionId: 'mock_session_id',
+    url: 'https://example.com/checkout'
+  };
 };
 
 export const redirectToCheckout = async (sessionId: string) => {
@@ -162,4 +151,4 @@ export const updateSubscription = async (
     console.error('Error updating subscription:', error);
     throw error;
   }
-}; 
+};

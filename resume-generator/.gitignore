@@ -39,4 +39,14 @@ out/
 coverage/
 
 # Temporary files
- 
+.temp
+.tmp
+
+# Debug files
+debug.log
+npm-debug.log*
+
+# Firebase cache
+.firebase/
+.firebaserc
+firebase-debug.log

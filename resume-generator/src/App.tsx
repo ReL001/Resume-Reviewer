@@ -7,7 +7,7 @@ import ResumeBuilder from './pages/ResumeBuilder';
 import CoverLetterBuilder from './pages/CoverLetterBuilder';
 import Pricing from './pages/Pricing';
 import PrivateRoute from './components/PrivateRoute';
-import { Box } from '@chakra-ui/react';
+import { Box, ChakraProvider } from '@chakra-ui/react';
 import { RouteDebug } from './utils/RouteDebug';
 
 function App() {

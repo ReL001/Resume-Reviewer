@@ -1,78 +1,116 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import {
-  User,
-  GoogleAuthProvider,
-  signInWithPopup,
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { 
+  User, 
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
-import { auth } from "../config/firebase";
+  updateProfile,
+  sendPasswordResetEmail
+} from 'firebase/auth';
+import { auth } from '../config/firebase';
 
 interface AuthContextType {
   user: User | null;
-  loading: boolean;
-  signInWithGoogle: () => Promise<User>;
-  signIn: (email: string, password: string) => Promise<User>;
-  signUp: (email: string, password: string) => Promise<User>;
-  signOut: () => Promise<void>;
   isAuthenticated: boolean;
+  signIn: (email: string, password: string) => Promise<User>;
+  signUp: (email: string, password: string, displayName: string) => Promise<User>;
+  signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  loading: boolean;
+  error: string | null;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
-  signInWithGoogle: async () => { throw new Error('Not implemented'); },
-  signIn: async () => { throw new Error('Not implemented'); },
-  signUp: async () => { throw new Error('Not implemented'); },
-  signOut: async () => { throw new Error('Not implemented'); },
-  isAuthenticated: false,
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // Listen for auth state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
       setLoading(false);
     });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
-  const signInWithGoogle = async (): Promise<User> => {
-    const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    return result.user;
-  };
-
+  // Sign in with email and password
   const signIn = async (email: string, password: string): Promise<User> => {
-    const result = await signInWithEmailAndPassword(auth, email, password);
-    return result.user;
+    try {
+      setError(null);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      return userCredential.user;
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to sign in';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
   };
 
-  const signUp = async (email: string, password: string): Promise<User> => {
-    const result = await createUserWithEmailAndPassword(auth, email, password);
-    return result.user;
+  // Sign up with email and password
+  const signUp = async (email: string, password: string, displayName: string): Promise<User> => {
+    try {
+      setError(null);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Update the user profile with display name
+      if (userCredential.user) {
+        await updateProfile(userCredential.user, {
+          displayName
+        });
+      }
+      
+      return userCredential.user;
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to create account';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
   };
 
+  // Sign out
   const signOut = async (): Promise<void> => {
-    await firebaseSignOut(auth);
+    try {
+      await firebaseSignOut(auth);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to sign out';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
   };
 
-  const value = {
+  // Reset password
+  const resetPassword = async (email: string): Promise<void> => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to send password reset email';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
+  const value: AuthContextType = {
     user,
-    loading,
-    signInWithGoogle,
+    isAuthenticated: !!user,
     signIn,
     signUp,
     signOut,
-    isAuthenticated: !!user,
+    resetPassword,
+    loading,
+    error
   };
 
   return (

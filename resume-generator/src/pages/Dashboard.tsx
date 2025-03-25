@@ -1,221 +1,191 @@
-import { 
-  Box, 
-  Container, 
-  Heading, 
-  Text, 
-  SimpleGrid, 
-  Button, 
-  Card, 
-  CardHeader, 
-  CardBody, 
-  CardFooter,
-  Stack,
-  Tabs, 
-  TabList, 
-  TabPanels, 
-  Tab, 
-  TabPanel,
-  useToast,
-  Flex,
-  Icon,
+import React from 'react';
+import {
+  Box,
+  Container,
+  Heading,
+  SimpleGrid,
+  Text,
+  Button,
+  VStack,
+  HStack,
   Badge,
   Stat,
   StatLabel,
   StatNumber,
-  StatGroup,
-  Divider
+  StatHelpText,
+  Card,
+  CardHeader,
+  CardBody,
+  CardFooter,
+  Divider,
+  Icon,
+  Progress,
+  useColorModeValue,
 } from '@chakra-ui/react';
-import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FiFileText, FiMail, FiDownload, FiEdit } from 'react-icons/fi';
 import { useAuth } from '../contexts/AuthContext';
-import { getUserDocuments, UserDocument } from '../services/firebaseService';
-import { FiFileText, FiMail, FiCalendar, FiClock, FiPlusCircle } from 'react-icons/fi';
 
 const Dashboard = () => {
-  const [documents, setDocuments] = useState<UserDocument[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const toast = useToast();
-
-  useEffect(() => {
-    const fetchDocuments = async () => {
-      if (user) {
-        try {
-          const docs = await getUserDocuments(user.uid);
-          setDocuments(docs);
-        } catch (error) {
-          console.error('Error fetching documents:', error);
-          toast({
-            title: 'Error fetching documents',
-            description: 'Could not load your documents. Please try again later.',
-            status: 'error',
-            duration: 5000,
-            isClosable: true,
-          });
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchDocuments();
-  }, [user, toast]);
-
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    }).format(date);
-  };
-
-  const resumeDocs = documents.filter(doc => doc.type === 'resume');
-  const coverLetterDocs = documents.filter(doc => doc.type === 'cover-letter');
+  const { user } = useAuth();
+  const cardBg = useColorModeValue('white', 'gray.700');
 
   return (
-    <Container maxW="container.xl" py={10}>
-      <Heading mb={2}>Dashboard</Heading>
-      <Text mb={8}>Manage your resumes and cover letters</Text>
-      
-      <StatGroup mb={8}>
-        <Stat>
-          <StatLabel>Resumes</StatLabel>
-          <StatNumber>{resumeDocs.length}</StatNumber>
-        </Stat>
-        <Stat>
-          <StatLabel>Cover Letters</StatLabel>
-          <StatNumber>{coverLetterDocs.length}</StatNumber>
-        </Stat>
-      </StatGroup>
-      
-      <Divider mb={8} />
+    <Container maxW="container.xl" py={8}>
+      <VStack spacing={8} align="stretch">
+        <Box>
+          <Heading size="lg" mb={2}>Dashboard</Heading>
+          <Text>Welcome back, {user?.displayName || 'User'}! Manage your resumes and applications.</Text>
+        </Box>
 
-      <Tabs variant="enclosed" colorScheme="blue">
-        <TabList mb={4}>
-          <Tab>Resumes</Tab>
-          <Tab>Cover Letters</Tab>
-        </TabList>
-        <TabPanels>
-          <TabPanel p={0}>
-            <Box mb={6}>
-              <Button 
-                leftIcon={<FiPlusCircle />} 
-                colorScheme="blue" 
-                onClick={() => navigate('/resume-builder')}
-              >
-                Create New Resume
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6}>
+          <Stat 
+            p={5} 
+            shadow="sm" 
+            border="1px" 
+            borderColor="gray.200" 
+            borderRadius="md" 
+            bg={cardBg}
+          >
+            <StatLabel>Resumes Created</StatLabel>
+            <StatNumber>3</StatNumber>
+            <StatHelpText>Last created 2 days ago</StatHelpText>
+          </Stat>
+          <Stat 
+            p={5} 
+            shadow="sm" 
+            border="1px" 
+            borderColor="gray.200" 
+            borderRadius="md" 
+            bg={cardBg}
+          >
+            <StatLabel>Cover Letters</StatLabel>
+            <StatNumber>1</StatNumber>
+            <StatHelpText>Last created 5 days ago</StatHelpText>
+          </Stat>
+          <Stat 
+            p={5} 
+            shadow="sm" 
+            border="1px" 
+            borderColor="gray.200" 
+            borderRadius="md" 
+            bg={cardBg}
+          >
+            <StatLabel>Applications</StatLabel>
+            <StatNumber>12</StatNumber>
+            <StatHelpText>4 in progress</StatHelpText>
+          </Stat>
+          <Stat 
+            p={5} 
+            shadow="sm" 
+            border="1px" 
+            borderColor="gray.200" 
+            borderRadius="md" 
+            bg={cardBg}
+          >
+            <StatLabel>Account Type</StatLabel>
+            <StatNumber>Free</StatNumber>
+            <StatHelpText>
+              <Button size="xs" colorScheme="blue" onClick={() => navigate('/pricing')}>
+                Upgrade
               </Button>
-            </Box>
-            
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-              {loading ? (
-                <Text>Loading your resumes...</Text>
-              ) : resumeDocs.length > 0 ? (
-                resumeDocs.map(doc => (
-                  <Card key={doc.id} variant="outline" height="100%">
-                    <CardHeader>
-                      <Flex justify="space-between" align="center">
-                        <Heading size="md" noOfLines={1}>{doc.title}</Heading>
-                        <Icon as={FiFileText} color="blue.500" boxSize={5} />
-                      </Flex>
-                    </CardHeader>
-                    <CardBody>
-                      <Stack spacing={2}>
-                        <Flex align="center">
-                          <Icon as={FiCalendar} mr={2} color="gray.500" />
-                          <Text fontSize="sm">Created: {formatDate(doc.createdAt)}</Text>
-                        </Flex>
-                        <Flex align="center">
-                          <Icon as={FiClock} mr={2} color="gray.500" />
-                          <Text fontSize="sm">Modified: {formatDate(doc.lastModified)}</Text>
-                        </Flex>
-                        <Badge colorScheme="blue" alignSelf="flex-start" mt={2}>
-                          {doc.template}
-                        </Badge>
-                      </Stack>
-                    </CardBody>
-                    <CardFooter>
-                      <Button 
-                        colorScheme="blue" 
-                        variant="outline" 
-                        size="sm" 
-                        width="full"
-                        onClick={() => navigate(`/resume-builder?id=${doc.id}`)}
-                      >
-                        Edit Resume
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))
-              ) : (
-                <Box p={4} borderWidth="1px" borderRadius="md">
-                  <Text>You haven't created any resumes yet. Get started by creating one!</Text>
-                </Box>
-              )}
-            </SimpleGrid>
-          </TabPanel>
+            </StatHelpText>
+          </Stat>
+        </SimpleGrid>
+
+        <Heading size="md" mt={4}>Your Resumes</Heading>
+        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+          <Card>
+            <CardHeader>
+              <HStack justify="space-between">
+                <Heading size="sm">Software Developer Resume</Heading>
+                <Badge colorScheme="green">ATS Score: 85%</Badge>
+              </HStack>
+            </CardHeader>
+            <CardBody py={2}>
+              <Text fontSize="sm" color="gray.600">Last updated: June 15, 2023</Text>
+              <Progress value={85} colorScheme="green" size="sm" mt={2} />
+            </CardBody>
+            <CardFooter pt={2}>
+              <HStack spacing={2}>
+                <Button size="sm" leftIcon={<Icon as={FiDownload} />} variant="ghost">
+                  Download
+                </Button>
+                <Button size="sm" leftIcon={<Icon as={FiEdit} />} variant="ghost" 
+                  onClick={() => navigate('/resume-builder')}>
+                  Edit
+                </Button>
+              </HStack>
+            </CardFooter>
+          </Card>
           
-          <TabPanel p={0}>
-            <Box mb={6}>
-              <Button 
-                leftIcon={<FiPlusCircle />} 
-                colorScheme="blue" 
-                onClick={() => navigate('/cover-letter-builder')}
-              >
-                Create New Cover Letter
-              </Button>
-            </Box>
-            
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-              {loading ? (
-                <Text>Loading your cover letters...</Text>
-              ) : coverLetterDocs.length > 0 ? (
-                coverLetterDocs.map(doc => (
-                  <Card key={doc.id} variant="outline" height="100%">
-                    <CardHeader>
-                      <Flex justify="space-between" align="center">
-                        <Heading size="md" noOfLines={1}>{doc.title}</Heading>
-                        <Icon as={FiMail} color="teal.500" boxSize={5} />
-                      </Flex>
-                    </CardHeader>
-                    <CardBody>
-                      <Stack spacing={2}>
-                        <Flex align="center">
-                          <Icon as={FiCalendar} mr={2} color="gray.500" />
-                          <Text fontSize="sm">Created: {formatDate(doc.createdAt)}</Text>
-                        </Flex>
-                        <Flex align="center">
-                          <Icon as={FiClock} mr={2} color="gray.500" />
-                          <Text fontSize="sm">Modified: {formatDate(doc.lastModified)}</Text>
-                        </Flex>
-                        <Badge colorScheme="teal" alignSelf="flex-start" mt={2}>
-                          {doc.template}
-                        </Badge>
-                      </Stack>
-                    </CardBody>
-                    <CardFooter>
-                      <Button 
-                        colorScheme="teal" 
-                        variant="outline" 
-                        size="sm" 
-                        width="full"
-                        onClick={() => navigate(`/cover-letter-builder?id=${doc.id}`)}
-                      >
-                        Edit Cover Letter
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))
-              ) : (
-                <Box p={4} borderWidth="1px" borderRadius="md">
-                  <Text>You haven't created any cover letters yet. Get started by creating one!</Text>
-                </Box>
-              )}
-            </SimpleGrid>
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
+          <Card>
+            <CardHeader>
+              <HStack justify="space-between">
+                <Heading size="sm">Product Manager Resume</Heading>
+                <Badge colorScheme="yellow">ATS Score: 72%</Badge>
+              </HStack>
+            </CardHeader>
+            <CardBody py={2}>
+              <Text fontSize="sm" color="gray.600">Last updated: May 22, 2023</Text>
+              <Progress value={72} colorScheme="yellow" size="sm" mt={2} />
+            </CardBody>
+            <CardFooter pt={2}>
+              <HStack spacing={2}>
+                <Button size="sm" leftIcon={<Icon as={FiDownload} />} variant="ghost">
+                  Download
+                </Button>
+                <Button size="sm" leftIcon={<Icon as={FiEdit} />} variant="ghost"
+                  onClick={() => navigate('/resume-builder')}>
+                  Edit
+                </Button>
+              </HStack>
+            </CardFooter>
+          </Card>
+        </SimpleGrid>
+
+        <Divider my={4} />
+
+        <Heading size="md">Quick Actions</Heading>
+        <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={4}>
+          <Button 
+            leftIcon={<Icon as={FiFileText} />} 
+            colorScheme="blue" 
+            variant="outline"
+            height="16"
+            onClick={() => navigate('/resume-builder/create')}
+          >
+            Create New Resume
+          </Button>
+          <Button 
+            leftIcon={<Icon as={FiMail} />} 
+            colorScheme="teal" 
+            variant="outline"
+            height="16"
+            onClick={() => navigate('/cover-letter-builder')}
+          >
+            Create Cover Letter
+          </Button>
+          <Button 
+            leftIcon={<Icon as={FiEdit} />} 
+            colorScheme="purple" 
+            variant="outline"
+            height="16"
+            onClick={() => navigate('/resume-builder')}
+          >
+            Resume Analysis
+          </Button>
+          <Button 
+            leftIcon={<Icon as={FiFileText} />} 
+            colorScheme="orange" 
+            variant="outline"
+            height="16"
+          >
+            View Templates
+          </Button>
+        </SimpleGrid>
+      </VStack>
     </Container>
   );
 };

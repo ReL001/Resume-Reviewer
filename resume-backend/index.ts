@@ -412,9 +412,39 @@ app.get('/api/health', (req, res) => {
 // Use the error handling middleware
 app.use(errorHandler);
 
-// Start the server
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
+// Update the server startup logic to try alternative ports
+const startServer = async (initialPort: number = 5000, maxAttempts: number = 5) => {
+  let currentPort = initialPort;
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    try {
+      app.listen(currentPort, () => {
+        console.log(`Server running on port ${currentPort}`);
+      });
+      
+      // Save the successful port to a file that the frontend can read
+      const fs = require('fs');
+      fs.writeFileSync('./.port', currentPort.toString());
+      
+      return; // Successfully started
+    } catch (error: any) {
+      if (error.code === 'EADDRINUSE') {
+        console.log(`Port ${currentPort} is already in use, trying port ${currentPort + 1}...`);
+        currentPort++;
+        attempts++;
+      } else {
+        console.error('Error starting server:', error);
+        throw error; // Rethrow if it's not a port conflict
+      }
+    }
+  }
+  
+  console.error(`Could not find an available port after ${maxAttempts} attempts`);
+  process.exit(1);
+};
+
+// Replace your current app.listen call with this
+startServer();
 
 export default app;

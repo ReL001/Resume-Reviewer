@@ -1,199 +1,181 @@
+import React from 'react';
 import {
   Box,
   Button,
   Container,
+  Flex,
   Heading,
+  Stack,
   Text,
-  VStack,
   SimpleGrid,
   Icon,
   useColorModeValue,
-  HStack,
-  Badge,
-  ButtonGroup,
-  Flex,
+  VStack,
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
-import { FaFileAlt, FaEnvelope, FaMagic, FaDownload, FaSearch, FaChartLine, FaUpload, FaFileSignature } from 'react-icons/fa';
-import { useRef, useCallback } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-
-const Feature = ({ icon, title, text, isFree = false }: { icon: any; title: string; text: string; isFree?: boolean }) => {
-  return (
-    <VStack spacing={4} align="start" p={5} borderRadius="md" borderWidth="1px" height="100%">
-      <HStack>
-        <Icon as={icon} w={10} h={10} color="blue.500" />
-        {isFree && <Badge colorScheme="green">Free</Badge>}
-      </HStack>
-      <Heading size="md">{title}</Heading>
-      <Text color={useColorModeValue('gray.600', 'gray.400')}>{text}</Text>
-    </VStack>
-  );
-};
+import { FiFileText, FiUser, FiCheckCircle, FiTarget, FiStar } from 'react-icons/fi';
 
 const Home = () => {
-  const bgColor = useColorModeValue('gray.50', 'gray.900');
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { isAuthenticated } = useAuth();
-
-  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      navigate('/resume-builder', { state: { file } });
-    }
-  }, [navigate]);
-
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleStartFromScratch = () => {
-    // Make sure to use the correct path and log for debugging
-    console.log('Navigating to resume builder create form');
-    
-    // Use plain URL navigation instead of state-based to avoid issues
-    navigate('/resume-builder/create');
-  };
 
   return (
     <Box>
-      {/* Hidden file input */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileUpload}
-        accept=".pdf"
-        style={{ display: 'none' }}
-      />
-
       {/* Hero Section */}
-      <Box bg={bgColor} py={20}>
-        <Container maxW="container.xl">
-          <VStack spacing={8} textAlign="center">
-            <Heading size="2xl">AI-Powered Resume Optimization</Heading>
-            <Text fontSize="xl" maxW="container.md">
-              Improve your resume's ATS score and stand out to employers. 
-              Get instant feedback with our AI-powered tools.
-            </Text>
-            <VStack spacing={6} width="100%" maxW="600px">
-              <Flex 
-                direction={{ base: "column", md: "row" }}
-                gap={4}
-                width="100%"
-                justify="center"
+      <Box bg={useColorModeValue('gray.50', 'gray.900')}>
+        <Container maxW="container.xl" py={{ base: 16, md: 20 }}>
+          <Stack
+            direction={{ base: 'column', md: 'row' }}
+            align="center"
+            spacing={{ base: 8, md: 16 }}
+          >
+            <Box flex={1}>
+              <Heading
+                as="h1"
+                size="2xl"
+                mb={6}
+                lineHeight="shorter"
               >
+                Create ATS-Optimized Resumes with AI
+              </Heading>
+              <Text fontSize="xl" mb={8} color="gray.600">
+                Generate professional resumes tailored to your target jobs. Increase your interview chances with our AI-powered resume builder.
+              </Text>
+              <Stack direction={{ base: 'column', sm: 'row' }} spacing={4}>
                 <Button
-                  colorScheme="blue"
                   size="lg"
-                  leftIcon={<FaUpload />}
-                  onClick={triggerFileInput}
-                  flex={{ base: "1", md: "initial" }}
-                  data-testid="upload-resume-button"
+                  colorScheme="blue"
+                  px={8}
+                  onClick={() => navigate('/resume-builder')}
                 >
-                  Upload Your Resume
+                  Get Started Now
                 </Button>
                 <Button
+                  size="lg"
                   variant="outline"
                   colorScheme="blue"
-                  size="lg"
-                  leftIcon={<FaFileSignature />}
-                  onClick={handleStartFromScratch}
-                  flex={{ base: "1", md: "initial" }}
-                  data-testid="create-from-scratch"
+                  px={8}
+                  onClick={() => navigate('/pricing')}
                 >
-                  Create From Scratch
+                  See Pricing
                 </Button>
-              </Flex>
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} width="100%">
-                <Box p={3} bg="blue.50" borderRadius="md" borderWidth="1px" borderColor="blue.200">
-                  <Text fontSize="sm" textAlign="center">
-                    <strong>Upload</strong>: Analyze your existing resume and get feedback to improve it
-                  </Text>
-                </Box>
-                <Box p={3} bg="blue.50" borderRadius="md" borderWidth="1px" borderColor="blue.200">
-                  <Text fontSize="sm" textAlign="center">
-                    <strong>Create</strong>: Build a new ATS-optimized resume with our guided form
-                  </Text>
-                </Box>
-              </SimpleGrid>
-            </VStack>
-          </VStack>
+              </Stack>
+            </Box>
+            <Flex flex={1} justify="center">
+              <Box
+                boxSize={{ base: '300px', md: '400px' }}
+                bg="blue.100"
+                borderRadius="md"
+                p={4}
+              >
+                <Text textAlign="center" fontStyle="italic" color="gray.700">
+                  Resume preview image placeholder
+                </Text>
+              </Box>
+            </Flex>
+          </Stack>
         </Container>
       </Box>
 
       {/* Features Section */}
-      <Container maxW="container.xl" py={20}>
-        <VStack mb={10}>
-          <Heading size="xl" mb={4}>Our Services</Heading>
-          <Text fontSize="lg" textAlign="center" maxW="container.md">
-            Optimize your job application materials with our powerful AI tools
-          </Text>
+      <Container maxW="container.xl" py={16}>
+        <VStack spacing={12}>
+          <Box textAlign="center" maxW="container.md" mx="auto">
+            <Heading as="h2" size="xl" mb={4}>
+              Why Choose Our Resume Builder?
+            </Heading>
+            <Text fontSize="lg" color="gray.600">
+              Our AI-powered platform helps you create professionally designed resumes that get through Applicant Tracking Systems and impress hiring managers.
+            </Text>
+          </Box>
+
+          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={10}>
+            <Feature
+              icon={FiCheckCircle}
+              title="ATS-Optimized"
+              text="Our AI ensures your resume gets past ATS filters with optimized keywords and formatting."
+            />
+            <Feature
+              icon={FiTarget}
+              title="Job-Specific Tailoring"
+              text="Customize your resume for specific job positions to increase your chances of landing interviews."
+            />
+            <Feature
+              icon={FiFileText}
+              title="Multiple Templates"
+              text="Choose from various professional templates designed to impress in your industry."
+            />
+            <Feature
+              icon={FiUser}
+              title="Expert Analysis"
+              text="Get detailed feedback on how to improve your existing resume from our AI analysts."
+            />
+            <Feature
+              icon={FiStar}
+              title="Cover Letters"
+              text="Generate matching cover letters that complement your resume and complete your application."
+            />
+            <Feature
+              icon={FiTarget}
+              title="Success Tracking"
+              text="Monitor your application success rate with our dashboard analytics."
+            />
+          </SimpleGrid>
         </VStack>
-        
-        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={10}>
-          <Feature
-            icon={FaFileAlt}
-            title="AI Resume Check"
-            text="Get instant AI feedback on your resume format, content, and structure."
-            isFree={true}
-          />
-          <Feature
-            icon={FaFileSignature}
-            title="ATS Resume Builder"
-            text="Create a professional resume from scratch with our guided form builder."
-            isFree={true}
-          />
-          <Feature
-            icon={FaSearch}
-            title="ATS Check"
-            text="See how well your resume performs against Applicant Tracking Systems."
-            isFree={true}
-          />
-          <Feature
-            icon={FaMagic}
-            title="ATS Score Improvement"
-            text="Get specific recommendations to improve your ATS score and pass resume screenings."
-          />
-          <Feature
-            icon={FaDownload}
-            title="Job Description Match"
-            text="Customize your resume to match specific job descriptions and increase your chances of getting interviews."
-          />
-          <Feature
-            icon={FaEnvelope}
-            title="Cover Letter Generation"
-            text="Generate tailored cover letters that complement your resume and highlight your qualifications."
-          />
-        </SimpleGrid>
       </Container>
-      
-      {/* Call to Action Section */}
-      <Box bg={bgColor} py={16}>
-        <Container maxW="container.xl" textAlign="center">
-          <Heading size="lg" mb={6}>Ready to optimize your resume for better results?</Heading>
-          <ButtonGroup spacing={{ base: 2, md: 4 }}>
+
+      {/* Call to Action */}
+      <Box bg={useColorModeValue('blue.50', 'blue.900')} py={16}>
+        <Container maxW="container.xl">
+          <VStack spacing={8}>
+            <Heading textAlign="center" size="xl">
+              Ready to Land Your Dream Job?
+            </Heading>
+            <Text fontSize="lg" textAlign="center" maxW="container.md">
+              Start building your professional resume today. No credit card required for basic features.
+            </Text>
             <Button
-              colorScheme="blue"
               size="lg"
-              leftIcon={<FaFileSignature />}
-              onClick={handleStartFromScratch}
-            >
-              Create New Resume
-            </Button>
-            <Button
               colorScheme="blue"
-              size="lg"
-              variant="outline"
-              leftIcon={<FaUpload />}
-              onClick={triggerFileInput}
+              onClick={() => navigate('/resume-builder/create')}
+              px={10}
             >
-              Analyze Existing Resume
+              Create Your Resume Now
             </Button>
-          </ButtonGroup>
+          </VStack>
         </Container>
       </Box>
     </Box>
+  );
+};
+
+const Feature = ({ icon, title, text }) => {
+  return (
+    <VStack
+      align="start"
+      p={6}
+      borderWidth="1px"
+      borderRadius="lg"
+      boxShadow="sm"
+      transition="transform 0.3s, box-shadow 0.3s"
+      _hover={{ transform: 'translateY(-5px)', boxShadow: 'md' }}
+    >
+      <Flex
+        align="center"
+        justify="center"
+        w={12}
+        h={12}
+        borderRadius="md"
+        bg="blue.100"
+        color="blue.600"
+        mb={4}
+      >
+        <Icon as={icon} fontSize="24px" />
+      </Flex>
+      <Heading size="md" mb={2}>
+        {title}
+      </Heading>
+      <Text color="gray.600">{text}</Text>
+    </VStack>
   );
 };
 

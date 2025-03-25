@@ -1,7 +1,7 @@
 import { Box, Button, Container, Flex, Heading, Spacer, Menu, MenuButton, MenuList, MenuItem, IconButton, useDisclosure, Avatar } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FiMenu, FiUser } from 'react-icons/fi';
+import { FiMenu } from 'react-icons/fi';
 import AuthModal from './Auth/AuthModal';
 
 const Navbar = () => {

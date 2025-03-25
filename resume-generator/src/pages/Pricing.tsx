@@ -21,6 +21,15 @@ import { FaCheck } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 import { plans } from '../services/stripeService';
 import AuthModal from '../components/Auth/AuthModal';
+import { useState } from 'react';
+
+interface PricingCardProps {
+  title: string;
+  price: string | number;
+  features: string[];
+  isPopular?: boolean;
+  onSubscribe: () => void;
+}
 
 const PricingCard = ({
   title,
@@ -28,13 +37,7 @@ const PricingCard = ({
   features,
   isPopular,
   onSubscribe,
-}: {
-  title: string;
-  price: string;
-  features: string[];
-  isPopular?: boolean;
-  onSubscribe: () => void;
-}) => {
+}: PricingCardProps) => {
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = isPopular ? 'blue.500' : 'gray.200';
 
@@ -100,8 +103,11 @@ const Pricing = () => {
   const { user } = useAuth();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
+  const [selectedPlan, setSelectedPlan] = useState('');
 
   const handleSubscribe = (plan: string) => {
+    setSelectedPlan(plan);
+    
     if (!user) {
       onOpen();
       return;
@@ -157,7 +163,11 @@ const Pricing = () => {
         </Button>
       </Box>
 
-      <AuthModal isOpen={isOpen} onClose={onClose} redirectPath="/pricing" />
+      <AuthModal 
+        isOpen={isOpen} 
+        onClose={onClose} 
+        redirectPath="/pricing" 
+      />
     </Container>
   );
 };

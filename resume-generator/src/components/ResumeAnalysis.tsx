@@ -120,6 +120,7 @@ const ResumeAnalysis: React.FC<ResumeAnalysisProps> = ({ onAnalysisSelect, isAna
               key={option.id}
               label={option.isPremium ? 'Premium Feature' : ''}
               placement="top"
+              isDisabled={!option.isPremium}
             >
               <Box
                 p={4}
