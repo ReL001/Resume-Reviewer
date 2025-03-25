@@ -10,9 +10,9 @@ import PrivateRoute from './components/PrivateRoute';
 
 function App() {
   return (
-    <AuthProvider>
-      <Navbar />
-      <Routes>
+      <AuthProvider>
+          <Navbar />
+          <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/pricing" element={<Pricing />} />
         <Route
@@ -40,8 +40,8 @@ function App() {
           }
         />
       </Routes>
-    </AuthProvider>
+      </AuthProvider>
   );
 }
 
-export default App; 
+export default App;

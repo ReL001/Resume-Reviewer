@@ -8,6 +8,15 @@ import {
   useColorModeValue,
   Badge,
   Tooltip,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalCloseButton,
+  Spinner,
+  useDisclosure,
 } from '@chakra-ui/react';
 import {
   FiCheckCircle,
@@ -31,10 +40,12 @@ interface AnalysisOption {
 
 interface ResumeAnalysisProps {
   onAnalysisSelect: (optionId: string) => void;
+  isAnalyzing: boolean;
 }
 
-const ResumeAnalysis: React.FC<ResumeAnalysisProps> = ({ onAnalysisSelect }) => {
+const ResumeAnalysis: React.FC<ResumeAnalysisProps> = ({ onAnalysisSelect, isAnalyzing }) => {
   const { user } = useAuth();
+  const { isOpen: isPremiumModalOpen, onOpen: openPremiumModal, onClose: closePremiumModal } = useDisclosure();
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
@@ -91,7 +102,7 @@ const ResumeAnalysis: React.FC<ResumeAnalysisProps> = ({ onAnalysisSelect }) => 
 
   const handleOptionClick = (option: AnalysisOption) => {
     if (option.isPremium && !user) {
-      // TODO: Show premium upgrade modal
+      openPremiumModal();
       return;
     }
     option.onClick();
@@ -117,10 +128,29 @@ const ResumeAnalysis: React.FC<ResumeAnalysisProps> = ({ onAnalysisSelect }) => 
                 borderRadius="md"
                 cursor="pointer"
                 _hover={{ shadow: 'md' }}
-                onClick={() => handleOptionClick(option)}
+                onClick={() => !isAnalyzing && handleOptionClick(option)}
+                opacity={isAnalyzing ? 0.7 : 1}
+                transition="all 0.2s"
                 position="relative"
               >
-                <VStack spacing={3} align="start">
+                <VStack spacing={3} align="start" position="relative">
+                  {isAnalyzing && option.id === 'ai-check' && (
+                    <Box
+                      position="absolute"
+                      top={0}
+                      left={0}
+                      right={0}
+                      bottom={0}
+                      bg="rgba(255, 255, 255, 0.8)"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      borderRadius="md"
+                      zIndex={2}
+                    >
+                      <Spinner size="xl" color="blue.500" />
+                    </Box>
+                  )}
                   <Box display="flex" alignItems="center" justifyContent="space-between" w="100%">
                     <Icon as={option.icon} boxSize={6} color="blue.500" />
                     {option.isPremium && (
@@ -153,8 +183,27 @@ const ResumeAnalysis: React.FC<ResumeAnalysisProps> = ({ onAnalysisSelect }) => 
           ))}
         </SimpleGrid>
       </VStack>
+
+      <Modal isOpen={isPremiumModalOpen} onClose={closePremiumModal}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Premium Feature</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Text>Upgrade to premium to access this feature!</Text>
+          </ModalBody>
+          <ModalFooter>
+            <Button colorScheme='blue' onClick={() => {
+              window.location.href = '/pricing';
+              closePremiumModal();
+            }}>
+              Upgrade Now
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 };
 
-export default ResumeAnalysis; 
+export default ResumeAnalysis;
