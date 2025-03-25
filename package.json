@@ -1,6 +1,19 @@
 {
+  "name": "resume-reviewer-project",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "cd resume-generator && npm run dev",
+    "dev:backend": "cd resume-backend && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:frontend": "cd resume-generator && npm run build",
+    "build:backend": "cd resume-backend && npm run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "install:all": "npm install && npm run install:deps",
+    "install:deps": "cd resume-generator && npm install && cd ../resume-backend && npm install"
+  },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^6.2.2"
+    "vite": "^6.2.2",
+    "concurrently": "^8.2.2"
   }
 }
