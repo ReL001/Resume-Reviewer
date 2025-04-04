@@ -25,15 +25,17 @@ import {
   Divider,
   MenuDivider,
   Tooltip,
+  Image
 } from '@chakra-ui/react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FiMenu, FiFileText, FiMail, FiUser, FiLogOut, FiHome, FiDollarSign } from 'react-icons/fi';
-import { motion, AnimatePresence } from 'framer-motion';
+import { FiMenu, FiFileText, FiMail, FiUser, FiLogOut, FiHome, FiDollarSign, FiChevronDown } from 'react-icons/fi';
+import { motion } from 'framer-motion';
 import AuthModal from './Auth/AuthModal';
 import { useState, useEffect } from 'react';
 
 const MotionBox = motion(Box);
+const MotionFlex = motion(Flex);
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -44,12 +46,14 @@ const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
 
   // Colors
-  const bgColor = useColorModeValue('white', 'gray.800');
-  const scrolledBgColor = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.100', 'gray.700');
+  const bgColor = useColorModeValue('white', 'gray.900');
+  const scrolledBgColor = useColorModeValue('white', 'gray.900');
+  const borderColor = useColorModeValue('gray.100', 'gray.800');
   const textColor = useColorModeValue('gray.800', 'white');
-  const activeColor = useColorModeValue('blue.500', 'blue.300');
-  const hoverBgColor = useColorModeValue('gray.50', 'gray.700');
+  const activeColor = useColorModeValue('brand.500', 'brand.300');
+  const hoverBgColor = useColorModeValue('gray.50', 'gray.800');
+  const menuBgColor = useColorModeValue('white', 'gray.800');
+  const menuBorderColor = useColorModeValue('gray.100', 'gray.700');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -89,7 +93,6 @@ const Navbar = () => {
         alignItems="center"
         justifyContent="center"
         whileHover={{ y: -2 }}
-        // transition={{ duration: 0.2 }}
         position="relative"
         onClick={() => navigate(to)}
         color={active ? activeColor : textColor}
@@ -123,25 +126,29 @@ const Navbar = () => {
         top="0"
         zIndex="1000" 
         bg={scrolled ? scrolledBgColor : bgColor}
-        boxShadow={scrolled ? "sm" : "none"}
+        boxShadow={scrolled ? "md" : "none"}
         borderBottom={!scrolled ? `1px solid ${borderColor}` : "none"}
         transition="all 0.3s ease"
+        backdropFilter={scrolled ? "blur(8px)" : "none"}
       >
         <Container maxW="container.xl" py={3}>
           <Flex alignItems="center" justify="space-between">
             {/* Logo */}
             <HStack spacing={2} onClick={() => navigate('/')} cursor="pointer">
-              <Box 
-                as={MotionBox}
+              <MotionBox
                 whileHover={{ scale: 1.05 }}
-                bg="blue.500" 
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                bg="brand.500" 
                 color="white" 
                 p={2} 
                 borderRadius="md"
                 boxShadow="sm"
+                transition={{ duration: 0.3 }}
               >
                 <FiFileText />
-              </Box>
+              </MotionBox>
               <Heading size="md">ResumeGenius</Heading>
               {process.env.NODE_ENV === 'development' && (
                 <Badge colorScheme="green" variant="solid" fontSize="xs">Dev</Badge>
@@ -160,28 +167,37 @@ const Navbar = () => {
             <HStack>
               {isAuthenticated ? (
                 <Menu>
-                  <Tooltip label={user?.displayName || 'Account'}>
-                    <MenuButton 
-                      as={MotionBox} 
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
+                  <MenuButton 
+                    as={Button} 
+                    rightIcon={<FiChevronDown />}
+                    variant="ghost"
+                    _hover={{ bg: hoverBgColor }}
+                    display={{ base: "none", md: "flex" }}
+                  >
+                    <HStack>
                       <Avatar 
                         size="sm" 
                         name={user?.displayName || 'User'} 
                         src={user?.photoURL || undefined} 
-                        cursor="pointer"
-                        bg="blue.500"
-                        icon={<FiUser fontSize="1.2rem" />}
-                        border="2px solid"
-                        borderColor={borderColor}
+                        bg="brand.500"
                       />
-                    </MenuButton>
-                  </Tooltip>
-                  <MenuList shadow="lg" border="1px solid" borderColor={borderColor} py={2}>
-                    <Text px={4} py={2} fontWeight="medium" color="gray.500">
-                      {user?.email}
-                    </Text>
+                      <Text display={{ base: 'none', lg: 'block' }}>{user?.displayName?.split(' ')[0] || 'User'}</Text>
+                    </HStack>
+                  </MenuButton>
+                  <MenuList 
+                    shadow="lg" 
+                    border="1px solid" 
+                    borderColor={menuBorderColor} 
+                    bg={menuBgColor}
+                    borderRadius="md"
+                    py={2}
+                    overflow="hidden"
+                  >
+                    <Box px={4} py={2}>
+                      <Text fontWeight="medium" color="gray.500" fontSize="sm">
+                        {user?.email}
+                      </Text>
+                    </Box>
                     <MenuDivider />
                     <MenuItem 
                       icon={<FiUser />} 
@@ -227,8 +243,11 @@ const Navbar = () => {
                     as={MotionBox}
                     whileHover={{ y: -2 }}
                     whileTap={{ scale: 0.95 }}
-                    colorScheme="blue" 
+                    colorScheme="brand" 
                     onClick={onAuthOpen}
+                    boxShadow="sm"
+                    _hover={{ boxShadow: "md" }}
+                    transition="all 0.3s"
                   >
                     Get Started
                   </Button>
@@ -250,22 +269,23 @@ const Navbar = () => {
 
       {/* Mobile drawer */}
       <Drawer isOpen={isMenuOpen} placement="right" onClose={onMenuClose} size="xs">
-        <DrawerOverlay />
-        <DrawerContent>
+        <DrawerOverlay backdropFilter="blur(4px)" />
+        <DrawerContent bg={bgColor} boxShadow="xl">
           <DrawerCloseButton />
-          <DrawerHeader borderBottomWidth="1px">
+          <DrawerHeader borderBottomWidth="1px" borderColor={borderColor}>
             {isAuthenticated ? 'Menu' : 'Navigation'}
           </DrawerHeader>
           <DrawerBody px={2} py={4}>
             <VStack spacing={1} align="stretch">
               {isAuthenticated && (
                 <>
-                  <Flex align="center" px={3} py={2} mb={2}>
+                  <Flex align="center" px={3} py={3} mb={2} bg={hoverBgColor} borderRadius="md">
                     <Avatar 
                       size="sm" 
                       name={user?.displayName || 'User'} 
                       src={user?.photoURL || undefined} 
                       mr={3}
+                      bg="brand.500"
                     />
                     <Box>
                       <Text fontWeight="bold" fontSize="sm">{user?.displayName || 'User'}</Text>
@@ -283,6 +303,7 @@ const Navbar = () => {
                 isActive={isActive('/')}
                 onClick={() => { navigate('/'); onMenuClose(); }}
                 mb={1}
+                borderRadius="md"
               >
                 Home
               </Button>
@@ -294,6 +315,7 @@ const Navbar = () => {
                 isActive={isActive('/resume-builder')}
                 onClick={() => { navigate('/resume-builder'); onMenuClose(); }}
                 mb={1}
+                borderRadius="md"
               >
                 Resume Builder
               </Button>
@@ -305,6 +327,7 @@ const Navbar = () => {
                 isActive={isActive('/cover-letter-builder')}
                 onClick={() => { navigate('/cover-letter-builder'); onMenuClose(); }}
                 mb={1}
+                borderRadius="md"
               >
                 Cover Letter Builder
               </Button>
@@ -316,6 +339,7 @@ const Navbar = () => {
                 isActive={isActive('/pricing')}
                 onClick={() => { navigate('/pricing'); onMenuClose(); }}
                 mb={1}
+                borderRadius="md"
               >
                 Pricing
               </Button>
@@ -330,6 +354,7 @@ const Navbar = () => {
                     isActive={isActive('/dashboard')}
                     onClick={() => { navigate('/dashboard'); onMenuClose(); }}
                     mb={1}
+                    borderRadius="md"
                   >
                     Dashboard
                   </Button>
@@ -341,6 +366,7 @@ const Navbar = () => {
                     colorScheme="red"
                     onClick={() => { handleSignOut(); onMenuClose(); }}
                     mt={4}
+                    borderRadius="md"
                   >
                     Sign Out
                   </Button>
@@ -351,10 +377,11 @@ const Navbar = () => {
                 <>
                   <Divider my={2} />
                   <Button 
-                    colorScheme="blue" 
+                    colorScheme="brand" 
                     width="full"
                     onClick={() => { onAuthOpen(); onMenuClose(); }}
                     mt={2}
+                    boxShadow="sm"
                   >
                     Sign In / Register
                   </Button>

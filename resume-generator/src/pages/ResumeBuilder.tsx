@@ -53,7 +53,7 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
   const location = useLocation();
   const toast = useToast();
   const { isAuthenticated } = useAuth();
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isAuthModalOpen, onOpen: onAuthModalOpen, onClose: onAuthModalClose } = useDisclosure();
 
   useEffect(() => {
     if (location.pathname === '/resume-builder/create') {
@@ -102,7 +102,7 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
     }
 
     if (analysisType === 'ats-check' && !isAuthenticated) {
-      onOpen();
+      onAuthModalOpen();
       return;
     }
 
@@ -134,7 +134,7 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
     } catch (error) {
       toast({
         title: 'Analysis Failed',
-        description: error.message || 'There was an error analyzing your resume',
+        description: error instanceof Error ? error.message : 'There was an error analyzing your resume',
         status: 'error',
         duration: 3000,
         isClosable: true,
@@ -164,7 +164,7 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
   };
 
   const getTabIndices = () => {
-    let indices = {
+    let indices: { upload: number; create: number; generated: number | null; extracted: number | null; analysis: number | null } = {
       upload: 0,
       create: 1,
       generated: null,
@@ -191,45 +191,56 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
 
   const tabIndices = getTabIndices();
 
-  const cardBg = useColorModeValue('white', 'gray.700');
+  const cardBg = useColorModeValue('white', 'gray.800');
   const cardBorderColor = useColorModeValue('gray.200', 'gray.600');
-  const accentColor = useColorModeValue('blue.500', 'blue.300');
-  const textColor = useColorModeValue('gray.700', 'gray.200');
+  const accentColor = useColorModeValue('brand.500', 'brand.300');
+  const textColor = useColorModeValue('gray.800', 'gray.200');
   const secondaryTextColor = useColorModeValue('gray.600', 'gray.400');
+  const stepBgGradient = useColorModeValue(
+    'linear(to-r, brand.50, blue.50)',
+    'linear(to-r, gray.700, blue.900)'
+  );
 
   return (
     <Container maxW="container.xl" py={8}>
       <VStack spacing={8} align="stretch">
-        <Box px={4} py={4} bg={cardBg} borderRadius="lg" borderWidth="1px" borderColor={cardBorderColor}>
-          {/* Stepper component removed
-          <Stepper size="sm" index={activeStep} colorScheme="blue" mb={8}>
-            {steps.map((step, index) => (
-              <Step key={index} onClick={() => index <= Math.max(1, activeTabIndex) && handleTabChange(index)}>
-                <StepIndicator>
-                  <StepStatus
-                    complete={<StepIcon />}
-                    incomplete={<StepNumber />}
-                    active={<StepNumber />}
-                  />
-                </StepIndicator>
-                <Box flexShrink={0}>
-                  <StepTitle>{step.title}</StepTitle>
-                  <StepDescription>{step.description}</StepDescription>
-                </Box>
-                <StepSeparator />
-              </Step>
-            ))}
-          </Stepper>
-          */}
+        <Box
+          px={6}
+          py={5}
+          bg={cardBg}
+          borderRadius="xl"
+          borderWidth="1px"
+          borderColor={cardBorderColor}
+          boxShadow="md"
+          position="relative"
+          overflow="hidden"
+        >
+          <Box 
+            position="absolute" 
+            top={0} 
+            right={0} 
+            bgGradient="linear(to-r, brand.500, purple.500)" 
+            opacity={0.1}
+            width="300px"
+            height="300px"
+            borderRadius="full"
+            filter="blur(60px)"
+            transform="translate(100px, -150px)"
+          />
+          
+          <Heading size="lg" mb={6} fontWeight="bold">Resume Builder</Heading>
+          <Text mb={6} maxW="800px" color={secondaryTextColor}>
+            Create a professional resume tailored for ATS systems. Start by uploading your existing resume for analysis, or create a new one from scratch.
+          </Text>
 
           <Tabs 
-            variant="enclosed" 
+            variant="soft-rounded" 
             index={activeTabIndex} 
             onChange={handleTabChange}
-            colorScheme="blue"
+            colorScheme="brand"
             isLazy
           >
-            <TabList display="none">
+            <TabList mb={6} display="flex" flexWrap="wrap">
               <Tab data-testid="upload-resume-tab">Upload Existing Resume</Tab>
               <Tab data-testid="create-from-scratch-tab">Create From Scratch</Tab>
               {generatedResume && <Tab>Generated Resume</Tab>}
@@ -245,19 +256,32 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                       variant="outline" 
                       bg={cardBg} 
                       borderColor={cardBorderColor} 
-                      borderRadius="lg"
+                      borderRadius="xl"
                       overflow="hidden"
                       boxShadow="sm"
                       h="full"
                       transition="all 0.3s"
-                      _hover={{ boxShadow: "md", transform: "translateY(-2px)" }}
+                      _hover={{ boxShadow: "md" }}
+                      position="relative"
                     >
                       <CardBody p={0}>
                         <Box 
                           h="120px" 
-                          bg="blue.500" 
-                          bgGradient="linear(to-r, blue.400, purple.500)"
+                          bgGradient="linear(to-r, brand.400, brand.600)"
+                          position="relative"
+                          overflow="hidden"
                         >
+                          <Box
+                            position="absolute"
+                            top="20%"
+                            left="5%"
+                            width="200px"
+                            height="200px"
+                            borderRadius="full"
+                            bg="rgba(255, 255, 255, 0.1)"
+                            filter="blur(30px)"
+                          />
+                          
                           <Center h="full">
                             <Icon as={FiUpload} w={12} h={12} color="white" />
                           </Center>
@@ -277,13 +301,19 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                               
                               <Text fontWeight="bold">What would you like to do next?</Text>
                               
-                              <HStack spacing={4} justify="center">
+                              <HStack spacing={4} justify="center" wrap="wrap">
                                 <Button
-                                  colorScheme="blue" 
+                                  colorScheme="brand" 
                                   onClick={() => analyzeResumeWithType('ai-check')} 
                                   isLoading={isAnalyzing && currentAnalysisType === 'ai-check'}
                                   loadingText="Analyzing"
                                   leftIcon={<Icon as={FiCheckCircle} />}
+                                  boxShadow="sm"
+                                  _hover={{
+                                    transform: 'translateY(-2px)',
+                                    boxShadow: 'md',
+                                  }}
+                                  transition="all 0.2s"
                                 >
                                   AI Check
                                 </Button>
@@ -293,6 +323,12 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                                   isLoading={isAnalyzing && currentAnalysisType === 'ats-check'}
                                   loadingText="Analyzing"
                                   leftIcon={<Icon as={FiFileText} />}
+                                  boxShadow="sm"
+                                  _hover={{
+                                    transform: 'translateY(-2px)',
+                                    boxShadow: 'md',
+                                  }}
+                                  transition="all 0.2s"
                                 >
                                   ATS Check
                                 </Button>
@@ -309,21 +345,34 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                       variant="outline" 
                       bg={cardBg} 
                       borderColor={cardBorderColor} 
-                      borderRadius="lg"
+                      borderRadius="xl"
                       overflow="hidden"
                       boxShadow="sm"
                       h="full"
                       transition="all 0.3s"
-                      _hover={{ boxShadow: "md", transform: "translateY(-2px)" }}
+                      _hover={{ boxShadow: "md" }}
                       onClick={() => handleTabChange(1)}
                       cursor="pointer"
+                      position="relative"
                     >
                       <CardBody p={0}>
                         <Box 
                           h="120px" 
-                          bg="teal.500" 
-                          bgGradient="linear(to-r, teal.400, green.500)"
+                          bgGradient="linear(to-r, teal.400, teal.600)"
+                          position="relative"
+                          overflow="hidden"
                         >
+                          <Box
+                            position="absolute"
+                            top="20%"
+                            left="5%"
+                            width="200px"
+                            height="200px"
+                            borderRadius="full"
+                            bg="rgba(255, 255, 255, 0.1)"
+                            filter="blur(30px)"
+                          />
+                          
                           <Center h="full">
                             <Icon as={FiEdit} w={12} h={12} color="white" />
                           </Center>
@@ -339,6 +388,12 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                               colorScheme="teal" 
                               size="lg" 
                               rightIcon={<Icon as={FiEdit} />}
+                              boxShadow="sm"
+                              _hover={{
+                                transform: 'translateY(-2px)',
+                                boxShadow: 'md',
+                              }}
+                              transition="all 0.2s"
                             >
                               Start Creating
                             </Button>
@@ -365,11 +420,24 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                   variant="outline" 
                   bg={cardBg} 
                   borderColor={cardBorderColor} 
-                  borderRadius="lg"
+                  borderRadius="xl"
                   overflow="hidden"
-                  boxShadow="sm"
+                  boxShadow="md"
+                  position="relative"
                 >
-                  <CardBody>
+                  <Box
+                    position="absolute"
+                    top={0}
+                    right={0}
+                    bgGradient="linear(to-r, brand.50, teal.50)"
+                    width="300px"
+                    height="300px"
+                    borderRadius="full"
+                    filter="blur(60px)"
+                    transform="translate(100px, -150px)"
+                    zIndex={0}
+                  />
+                  <CardBody position="relative" zIndex={1}>
                     <ResumeForm onResumeGenerated={handleResumeGenerated} />
                   </CardBody>
                 </Card>
@@ -381,17 +449,21 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                     variant="outline" 
                     bg={cardBg} 
                     borderColor={cardBorderColor} 
-                    borderRadius="lg"
+                    borderRadius="xl"
                     overflow="hidden"
-                    boxShadow="sm"
+                    boxShadow="md"
+                    position="relative"
                   >
                     <CardBody>
                       <VStack spacing={6} align="stretch">
-                        <Heading size="md">Your ATS-Optimized Resume</Heading>
+                        <Flex justify="space-between" align="center">
+                          <Heading size="md">Your ATS-Optimized Resume</Heading>
+                          <Badge colorScheme="green" px={2} py={1} borderRadius="md">AI Generated</Badge>
+                        </Flex>
                         <Box 
                           p={6} 
                           borderWidth="1px" 
-                          borderRadius="md" 
+                          borderRadius="lg" 
                           bg={useColorModeValue("gray.50", "gray.800")}
                           fontFamily="mono"
                           whiteSpace="pre-wrap"
@@ -402,9 +474,9 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                           {generatedResume}
                         </Box>
                         
-                        <HStack spacing={4} justify="center">
+                        <HStack spacing={4} justify="center" wrap="wrap">
                           <Button 
-                            colorScheme="blue" 
+                            colorScheme="brand" 
                             leftIcon={<Icon as={FiFileText} />}
                             onClick={() => {
                               const element = document.createElement("a");
@@ -415,6 +487,12 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                               element.click();
                               document.body.removeChild(element);
                             }}
+                            boxShadow="sm"
+                            _hover={{
+                              transform: 'translateY(-2px)',
+                              boxShadow: 'md',
+                            }}
+                            transition="all 0.2s"
                           >
                             Download Resume
                           </Button>
@@ -423,7 +501,7 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                             variant="outline" 
                             onClick={() => {
                               if (!isAuthenticated) {
-                                onOpen();
+                                onAuthModalOpen();
                                 return;
                               }
                               toast({
@@ -434,6 +512,12 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                                 isClosable: true,
                               });
                             }}
+                            boxShadow="sm"
+                            _hover={{
+                              transform: 'translateY(-2px)',
+                              boxShadow: 'md',
+                            }}
+                            transition="all 0.2s"
                           >
                             Save Resume
                           </Button>
@@ -450,17 +534,20 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                     variant="outline" 
                     bg={cardBg} 
                     borderColor={cardBorderColor} 
-                    borderRadius="lg"
+                    borderRadius="xl"
                     overflow="hidden"
-                    boxShadow="sm"
+                    boxShadow="md"
                   >
                     <CardBody>
                       <VStack spacing={6} align="stretch">
-                        <Heading size="md">Extracted Text from Resume</Heading>
+                        <Flex justify="space-between" align="center">
+                          <Heading size="md">Extracted Text from Resume</Heading>
+                          <Badge colorScheme="blue" px={2} py={1} borderRadius="md">Extracted</Badge>
+                        </Flex>
                         <Box 
                           p={6} 
                           borderWidth="1px" 
-                          borderRadius="md" 
+                          borderRadius="lg" 
                           bg={useColorModeValue("gray.50", "gray.800")}
                           fontFamily="mono"
                           whiteSpace="pre-wrap"
@@ -482,29 +569,50 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                     variant="outline" 
                     bg={cardBg} 
                     borderColor={cardBorderColor} 
-                    borderRadius="lg"
+                    borderRadius="xl"
                     overflow="hidden"
-                    boxShadow="sm"
+                    boxShadow="md"
+                    position="relative"
                   >
-                    <CardBody>
+                    <Box
+                      position="absolute"
+                      top={0}
+                      right={0}
+                      bgGradient="linear(to-r, blue.50, purple.50)"
+                      width="300px"
+                      height="300px"
+                      borderRadius="full"
+                      filter="blur(60px)"
+                      transform="translate(100px, -150px)"
+                      opacity={0.5}
+                      zIndex={0}
+                    />
+                    <CardBody position="relative" zIndex={1}>
                       <VStack spacing={6} align="stretch">
                         <Heading size="md">Analysis Results</Heading>
                         <Box 
                           p={6} 
                           borderWidth="1px" 
-                          borderRadius="md" 
+                          borderRadius="lg" 
                           bg="white"
                           boxShadow="sm"
                         >
-                          <Box mb={6}>
-                            <Flex align="center" mb={2}>
-                              <Heading size="md" mr={2}>Resume Score:</Heading>
+                          <Box mb={8}>
+                            <Flex align="center" mb={3}>
+                              <Heading size="md" mr={4}>Resume Score</Heading>
                               <Badge 
                                 fontSize="xl" 
                                 px={3} 
                                 py={1} 
-                                borderRadius="md"
-                                colorScheme={analysisResults.score > 80 ? "green" : analysisResults.score > 60 ? "yellow" : "red"}
+                                borderRadius="lg"
+                                bgGradient={
+                                  analysisResults.score > 80 
+                                    ? "linear(to-r, green.400, green.600)" 
+                                    : analysisResults.score > 60 
+                                      ? "linear(to-r, yellow.400, yellow.600)" 
+                                      : "linear(to-r, red.400, red.600)"
+                                }
+                                color="white"
                               >
                                 {analysisResults.score}/100
                               </Badge>
@@ -515,27 +623,29 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                               borderRadius="md"
                               colorScheme={analysisResults.score > 80 ? "green" : analysisResults.score > 60 ? "yellow" : "red"}
                               mb={2}
+                              hasStripe
+                              isAnimated
                             />
                           </Box>
                           
-                          <Box mb={6} bg="green.50" p={4} borderRadius="md" borderLeft="4px solid" borderLeftColor="green.500">
-                            <Heading size="sm" mb={2} color="green.700">Strengths</Heading>
-                            <VStack align="stretch" spacing={2}>
+                          <Box mb={8} bg="green.50" p={5} borderRadius="lg" borderLeft="4px solid" borderLeftColor="green.500">
+                            <Heading size="sm" mb={3} color="green.700">Strengths</Heading>
+                            <VStack align="stretch" spacing={3}>
                               {analysisResults.feedback.strengths.map((strength: string, index: number) => (
-                                <Flex key={index}>
-                                  <Icon as={FiCheckCircle} color="green.500" mt={1} mr={2} />
+                                <Flex key={index} align="start">
+                                  <Icon as={FiCheckCircle} color="green.500" mt={1} mr={3} />
                                   <Text>{strength}</Text>
                                 </Flex>
                               ))}
                             </VStack>
                           </Box>
                           
-                          <Box mb={6} bg="orange.50" p={4} borderRadius="md" borderLeft="4px solid" borderLeftColor="orange.500">
-                            <Heading size="sm" mb={2} color="orange.700">Areas for Improvement</Heading>
-                            <VStack align="stretch" spacing={2}>
+                          <Box mb={8} bg="orange.50" p={5} borderRadius="lg" borderLeft="4px solid" borderLeftColor="orange.500">
+                            <Heading size="sm" mb={3} color="orange.700">Areas for Improvement</Heading>
+                            <VStack align="stretch" spacing={3}>
                               {analysisResults.feedback.improvements.map((improvement: string, index: number) => (
-                                <Flex key={index}>
-                                  <Icon as={FiCheckCircle} color="orange.500" mt={1} mr={2} />
+                                <Flex key={index} align="start">
+                                  <Icon as={FiCheckCircle} color="orange.500" mt={1} mr={3} />
                                   <Text>{improvement}</Text>
                                 </Flex>
                               ))}
@@ -543,14 +653,43 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                           </Box>
                           
                           {analysisResults.rawAnalysis && (
-                            <Box mt={4} pt={4} borderTopWidth="1px">
-                              <Heading size="sm" mb={2}>Full Analysis</Heading>
-                              <Text whiteSpace="pre-wrap" fontSize="sm">
+                            <Box mt={8} pt={6} borderTopWidth="1px">
+                              <Heading size="sm" mb={4}>Detailed Analysis</Heading>
+                              <Text whiteSpace="pre-wrap" fontSize="sm" color="gray.700">
                                 {analysisResults.rawAnalysis}
                               </Text>
                             </Box>
                           )}
                         </Box>
+                        
+                        <HStack justify="center" spacing={4}>
+                          <Button
+                            leftIcon={<Icon as={FiEdit} />}
+                            colorScheme="brand"
+                            onClick={() => handleTabChange(1)}
+                            boxShadow="sm"
+                            _hover={{
+                              transform: 'translateY(-2px)',
+                              boxShadow: 'md',
+                            }}
+                            transition="all 0.2s"
+                          >
+                            Create Improved Resume
+                          </Button>
+                          <Button
+                            variant="outline"
+                            colorScheme="teal"
+                            onClick={() => analyzeResumeWithType('ats-check')}
+                            boxShadow="sm"
+                            _hover={{
+                              transform: 'translateY(-2px)',
+                              boxShadow: 'md',
+                            }}
+                            transition="all 0.2s"
+                          >
+                            Get ATS Check
+                          </Button>
+                        </HStack>
                       </VStack>
                     </CardBody>
                   </Card>
@@ -561,12 +700,7 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
         </Box>
       </VStack>
       
-      <AuthModal
-        isOpen={isOpen}
-        onClose={onClose}
-        initialTab="login"
-        redirectPath="/resume-builder"
-      />
+      <AuthModal isOpen={isAuthModalOpen} onClose={onAuthModalClose} />
     </Container>
   );
 };
