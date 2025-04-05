@@ -149,7 +149,7 @@ const Navbar = () => {
               >
                 <FiFileText />
               </MotionBox>
-              <Heading size="md">ResumeGenius</Heading>
+              <Heading size="md">Dr.Resume <Text as="span" color="brand.500" fontWeight="bold">AI</Text></Heading>
               {process.env.NODE_ENV === 'development' && (
                 <Badge colorScheme="green" variant="solid" fontSize="xs">Dev</Badge>
               )}

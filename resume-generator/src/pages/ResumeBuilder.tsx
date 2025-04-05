@@ -110,19 +110,26 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
     setCurrentAnalysisType(analysisType);
 
     try {
-      const result = await analyzeResume({
-        file: resumeFile,
-        analysisType: analysisType as any
-      });
+      console.log(`Starting resume analysis: ${analysisType}`);
+      const result = await analyzeResume(resumeFile, analysisType);
+      console.log('Analysis completed:', result);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Analysis failed');
+      }
 
       const formattedResults = formatAnalysisResults(result.analysis, analysisType);
+      console.log('Formatted results:', formattedResults);
+      
       setAnalysisResults(formattedResults);
+      setExtractedText(result.extractedText || '');
 
-      let analysisTabIndex = 2;
-      if (generatedResume) analysisTabIndex++;
-      if (extractedText) analysisTabIndex++;
-
-      setActiveTabIndex(analysisTabIndex);
+      let analysisTabIndex = getTabIndices().analysis;
+      if (analysisTabIndex !== null) {
+        setActiveTabIndex(analysisTabIndex);
+      } else {
+        setActiveTabIndex(activeTabIndex + 1); 
+      }
 
       toast({
         title: 'Analysis Complete',
@@ -132,11 +139,12 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
         isClosable: true,
       });
     } catch (error) {
+      console.error('Analysis error:', error);
       toast({
         title: 'Analysis Failed',
         description: error instanceof Error ? error.message : 'There was an error analyzing your resume',
         status: 'error',
-        duration: 3000,
+        duration: 5000,
         isClosable: true,
       });
     } finally {
@@ -589,7 +597,7 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                     />
                     <CardBody position="relative" zIndex={1}>
                       <VStack spacing={6} align="stretch">
-                        <Heading size="md">Analysis Results</Heading>
+                        <Heading size="md">Resume Analysis Results</Heading>
                         <Box 
                           p={6} 
                           borderWidth="1px" 
@@ -628,29 +636,61 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                             />
                           </Box>
                           
-                          <Box mb={8} bg="green.50" p={5} borderRadius="lg" borderLeft="4px solid" borderLeftColor="green.500">
-                            <Heading size="sm" mb={3} color="green.700">Strengths</Heading>
-                            <VStack align="stretch" spacing={3}>
-                              {analysisResults.feedback.strengths.map((strength: string, index: number) => (
-                                <Flex key={index} align="start">
-                                  <Icon as={FiCheckCircle} color="green.500" mt={1} mr={3} />
-                                  <Text>{strength}</Text>
-                                </Flex>
-                              ))}
-                            </VStack>
-                          </Box>
+                          {analysisResults.feedback && analysisResults.feedback.strengths && analysisResults.feedback.strengths.length > 0 && (
+                            <Box mb={8} bg="green.50" p={5} borderRadius="lg" borderLeft="4px solid" borderLeftColor="green.500">
+                              <Heading size="sm" mb={3} color="green.700">Strengths</Heading>
+                              <VStack align="stretch" spacing={3}>
+                                {analysisResults.feedback.strengths.map((strength: string, index: number) => (
+                                  <Flex key={index} align="start">
+                                    <Icon as={FiCheckCircle} color="green.500" mt={1} mr={3} />
+                                    <Text>{strength}</Text>
+                                  </Flex>
+                                ))}
+                              </VStack>
+                            </Box>
+                          )}
                           
-                          <Box mb={8} bg="orange.50" p={5} borderRadius="lg" borderLeft="4px solid" borderLeftColor="orange.500">
-                            <Heading size="sm" mb={3} color="orange.700">Areas for Improvement</Heading>
-                            <VStack align="stretch" spacing={3}>
-                              {analysisResults.feedback.improvements.map((improvement: string, index: number) => (
-                                <Flex key={index} align="start">
-                                  <Icon as={FiCheckCircle} color="orange.500" mt={1} mr={3} />
-                                  <Text>{improvement}</Text>
-                                </Flex>
-                              ))}
-                            </VStack>
-                          </Box>
+                          {analysisResults.feedback && analysisResults.feedback.improvements && analysisResults.feedback.improvements.length > 0 && (
+                            <Box mb={8} bg="orange.50" p={5} borderRadius="lg" borderLeft="4px solid" borderLeftColor="orange.500">
+                              <Heading size="sm" mb={3} color="orange.700">Areas for Improvement</Heading>
+                              <VStack align="stretch" spacing={3}>
+                                {analysisResults.feedback.improvements.map((improvement: string, index: number) => (
+                                  <Flex key={index} align="start">
+                                    <Icon as={FiCheckCircle} color="orange.500" mt={1} mr={3} />
+                                    <Text>{improvement}</Text>
+                                  </Flex>
+                                ))}
+                              </VStack>
+                            </Box>
+                          )}
+
+                          {analysisResults.recommendations && analysisResults.recommendations.length > 0 && (
+                            <Box mb={8} bg="blue.50" p={5} borderRadius="lg" borderLeft="4px solid" borderLeftColor="blue.500">
+                              <Heading size="sm" mb={3} color="blue.700">Recommendations</Heading>
+                              <VStack align="stretch" spacing={3}>
+                                {analysisResults.recommendations.map((recommendation: string, index: number) => (
+                                  <Flex key={index} align="start">
+                                    <Icon as={FiCheckCircle} color="blue.500" mt={1} mr={3} />
+                                    <Text>{recommendation}</Text>
+                                  </Flex>
+                                ))}
+                              </VStack>
+                            </Box>
+                          )}
+                          
+                          {analysisResults.formattingFeedback && (
+                            <Box mb={8} bg="purple.50" p={5} borderRadius="lg" borderLeft="4px solid" borderLeftColor="purple.500">
+                              <Heading size="sm" mb={3} color="purple.700">Formatting Feedback</Heading>
+                              <Text>{analysisResults.formattingFeedback}</Text>
+                            </Box>
+                          )}
+
+                          {analysisResults.overallAssessment && (
+                            <Box mb={8} bg="gray.50" p={5} borderRadius="lg" borderLeft="4px solid" borderLeftColor="gray.500">
+                              <Heading size="sm" mb={3} color="gray.700">Overall Assessment</Heading>
+                              <Text>{analysisResults.overallAssessment}</Text>
+                            </Box>
+                          )}
                           
                           {analysisResults.rawAnalysis && (
                             <Box mt={8} pt={6} borderTopWidth="1px">
