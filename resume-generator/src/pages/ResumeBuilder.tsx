@@ -35,6 +35,7 @@ import { analyzeResume, formatAnalysisResults } from '../services/resumeService'
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from '../components/Auth/AuthModal';
 import { FiUpload, FiEdit, FiFileText, FiCheckCircle } from 'react-icons/fi';
+import ATSResultsPanel from '../components/ATSResultsPanel';
 
 interface ResumeBuilderProps {
   initialTabIndex?: number;
@@ -45,6 +46,7 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
   const [extractedText, setExtractedText] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentAnalysisType, setCurrentAnalysisType] = useState<string | null>(null);
+  const [lastCompletedAnalysisType, setLastCompletedAnalysisType] = useState<string | null>(null); // Track last completed analysis
   const [analysisResults, setAnalysisResults] = useState<any>(null);
   const [activeTabIndex, setActiveTabIndex] = useState<number>(initialTabIndex);
   const [generatedResume, setGeneratedResume] = useState<string | null>(null);
@@ -90,7 +92,7 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
   };
 
   const analyzeResumeWithType = async (analysisType: string) => {
-    if (!resumeFile) {
+    if (!resumeFile && !extractedText) {
       toast({
         title: 'Error',
         description: 'Please upload a resume first',
@@ -101,28 +103,46 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
       return;
     }
 
-    if (analysisType === 'ats-check' && !isAuthenticated) {
-      onAuthModalOpen();
-      return;
-    }
-
     setIsAnalyzing(true);
     setCurrentAnalysisType(analysisType);
 
     try {
-      const result = await analyzeResume({
-        file: resumeFile,
-        analysisType: analysisType as any
-      });
+      console.log(`Starting resume analysis: ${analysisType}`);
+      
+      let result;
+      // If we have a file, send it directly
+      if (resumeFile) {
+        // Log the file size and type for debugging
+        console.log(`Resume file: ${resumeFile.name}, size: ${resumeFile.size}, type: ${resumeFile.type}`);
+        result = await analyzeResume(resumeFile, analysisType);
+      } 
+      // If file upload failed or we only have extracted text, send the text directly
+      else if (extractedText) {
+        console.log(`Sending extracted text for analysis, length: ${extractedText.length}`);
+        result = await analyzeResume(extractedText, analysisType);
+      } else {
+        throw new Error("No resume data available for analysis");
+      }
+      
+      console.log('Analysis completed:', result);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Analysis failed');
+      }
 
       const formattedResults = formatAnalysisResults(result.analysis, analysisType);
+      console.log('Formatted results:', formattedResults);
+      
       setAnalysisResults(formattedResults);
+      setLastCompletedAnalysisType(analysisType); 
+      setExtractedText(result.extractedText || extractedText);
 
-      let analysisTabIndex = 2;
-      if (generatedResume) analysisTabIndex++;
-      if (extractedText) analysisTabIndex++;
-
-      setActiveTabIndex(analysisTabIndex);
+      let analysisTabIndex = getTabIndices().analysis;
+      if (analysisTabIndex !== null) {
+        setActiveTabIndex(analysisTabIndex);
+      } else {
+        setActiveTabIndex(activeTabIndex + 1); 
+      }
 
       toast({
         title: 'Analysis Complete',
@@ -132,11 +152,20 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
         isClosable: true,
       });
     } catch (error) {
+      console.error('Analysis error:', error);
+      
+      // More detailed error logging
+      if (error instanceof Error) {
+        console.error(`Error name: ${error.name}, message: ${error.message}, stack: ${error.stack}`);
+      }
+      
       toast({
         title: 'Analysis Failed',
-        description: error instanceof Error ? error.message : 'There was an error analyzing your resume',
+        description: error instanceof Error ? 
+          `${error.message}. Please try again or contact support.` : 
+          'There was an error analyzing your resume. Please try again.',
         status: 'error',
-        duration: 3000,
+        duration: 5000,
         isClosable: true,
       });
     } finally {
@@ -187,6 +216,115 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
     }
 
     return indices;
+  };
+
+  const renderAnalysisResults = () => {
+    if (!analysisResults) return null;
+
+    if (lastCompletedAnalysisType === 'ats-check') {
+      return <ATSResultsPanel analysisResults={analysisResults} />;
+    }
+
+    // Default rendering for ai-check or other analysis types
+    return (
+      <VStack spacing={6} align="stretch">
+        <Box mb={8}>
+          <Flex align="center" mb={3}>
+            <Heading size="md" mr={4}>Resume Score</Heading>
+            <Badge 
+              fontSize="xl" 
+              px={3} 
+              py={1} 
+              borderRadius="lg"
+              bgGradient={
+                analysisResults.score > 80 
+                  ? "linear(to-r, green.400, green.600)" 
+                  : analysisResults.score > 60 
+                    ? "linear(to-r, yellow.400, yellow.600)"
+                    : "linear(to-r, red.400, red.600)"
+              }
+              color="white"
+            >
+              {analysisResults.score}/100
+            </Badge>
+          </Flex>
+          <Progress 
+            value={analysisResults.score} 
+            size="lg" 
+            borderRadius="md"
+            colorScheme={analysisResults.score > 80 ? "green" : analysisResults.score > 60 ? "yellow" : "red"}
+            mb={2}
+            hasStripe
+            isAnimated
+          />
+        </Box>
+        
+        {analysisResults.feedback && analysisResults.feedback.strengths && analysisResults.feedback.strengths.length > 0 && (
+          <Box mb={8} bg="green.50" p={5} borderRadius="lg" borderLeft="4px solid" borderLeftColor="green.500">
+            <Heading size="sm" mb={3} color="green.700">Strengths</Heading>
+            <VStack align="stretch" spacing={3}>
+              {analysisResults.feedback.strengths.map((strength: string, index: number) => (
+                <Flex key={index} align="start">
+                  <Icon as={FiCheckCircle} color="green.500" mt={1} mr={3} />
+                  <Text>{strength}</Text>
+                </Flex>
+              ))}
+            </VStack>
+          </Box>
+        )}
+        
+        {analysisResults.feedback && analysisResults.feedback.improvements && analysisResults.feedback.improvements.length > 0 && (
+          <Box mb={8} bg="orange.50" p={5} borderRadius="lg" borderLeft="4px solid" borderLeftColor="orange.500">
+            <Heading size="sm" mb={3} color="orange.700">Areas for Improvement</Heading>
+            <VStack align="stretch" spacing={3}>
+              {analysisResults.feedback.improvements.map((improvement: string, index: number) => (
+                <Flex key={index} align="start">
+                  <Icon as={FiCheckCircle} color="orange.500" mt={1} mr={3} />
+                  <Text>{improvement}</Text>
+                </Flex>
+              ))}
+            </VStack>
+          </Box>
+        )}
+
+        {analysisResults.recommendations && analysisResults.recommendations.length > 0 && (
+          <Box mb={8} bg="blue.50" p={5} borderRadius="lg" borderLeft="4px solid" borderLeftColor="blue.500">
+            <Heading size="sm" mb={3} color="blue.700">Recommendations</Heading>
+            <VStack align="stretch" spacing={3}>
+              {analysisResults.recommendations.map((recommendation: string, index: number) => (
+                <Flex key={index} align="start">
+                  <Icon as={FiCheckCircle} color="blue.500" mt={1} mr={3} />
+                  <Text>{recommendation}</Text>
+                </Flex>
+              ))}
+            </VStack>
+          </Box>
+        )}
+        
+        {analysisResults.formattingFeedback && (
+          <Box mb={8} bg="purple.50" p={5} borderRadius="lg" borderLeft="4px solid" borderLeftColor="purple.500">
+            <Heading size="sm" mb={3} color="purple.700">Formatting Feedback</Heading>
+            <Text>{analysisResults.formattingFeedback}</Text>
+          </Box>
+        )}
+
+        {analysisResults.overallAssessment && (
+          <Box mb={8} bg="gray.50" p={5} borderRadius="lg" borderLeft="4px solid" borderLeftColor="gray.500">
+            <Heading size="sm" mb={3} color="gray.700">Overall Assessment</Heading>
+            <Text>{analysisResults.overallAssessment}</Text>
+          </Box>
+        )}
+        
+        {analysisResults.rawAnalysis && (
+          <Box mt={8} pt={6} borderTopWidth="1px">
+            <Heading size="sm" mb={4}>Detailed Analysis</Heading>
+            <Text whiteSpace="pre-wrap" fontSize="sm" color="gray.700">
+              {analysisResults.rawAnalysis}
+            </Text>
+          </Box>
+        )}
+      </VStack>
+    );
   };
 
   const tabIndices = getTabIndices();
@@ -319,7 +457,7 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                                 </Button>
                                 <Button
                                   colorScheme="teal" 
-                                  onClick={() => analyzeResumeWithType('ats-check')} 
+                                  onClick={() => analyzeResumeWithType('ats-check')} // Implementation
                                   isLoading={isAnalyzing && currentAnalysisType === 'ats-check'}
                                   loadingText="Analyzing"
                                   leftIcon={<Icon as={FiFileText} />}
@@ -589,7 +727,9 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                     />
                     <CardBody position="relative" zIndex={1}>
                       <VStack spacing={6} align="stretch">
-                        <Heading size="md">Analysis Results</Heading>
+                        <Heading size="md">
+                          {lastCompletedAnalysisType === 'ats-check' ? 'ATS Compatibility Analysis' : 'Resume Analysis Results'}
+                        </Heading>
                         <Box 
                           p={6} 
                           borderWidth="1px" 
@@ -597,69 +737,7 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                           bg="white"
                           boxShadow="sm"
                         >
-                          <Box mb={8}>
-                            <Flex align="center" mb={3}>
-                              <Heading size="md" mr={4}>Resume Score</Heading>
-                              <Badge 
-                                fontSize="xl" 
-                                px={3} 
-                                py={1} 
-                                borderRadius="lg"
-                                bgGradient={
-                                  analysisResults.score > 80 
-                                    ? "linear(to-r, green.400, green.600)" 
-                                    : analysisResults.score > 60 
-                                      ? "linear(to-r, yellow.400, yellow.600)" 
-                                      : "linear(to-r, red.400, red.600)"
-                                }
-                                color="white"
-                              >
-                                {analysisResults.score}/100
-                              </Badge>
-                            </Flex>
-                            <Progress 
-                              value={analysisResults.score} 
-                              size="lg" 
-                              borderRadius="md"
-                              colorScheme={analysisResults.score > 80 ? "green" : analysisResults.score > 60 ? "yellow" : "red"}
-                              mb={2}
-                              hasStripe
-                              isAnimated
-                            />
-                          </Box>
-                          
-                          <Box mb={8} bg="green.50" p={5} borderRadius="lg" borderLeft="4px solid" borderLeftColor="green.500">
-                            <Heading size="sm" mb={3} color="green.700">Strengths</Heading>
-                            <VStack align="stretch" spacing={3}>
-                              {analysisResults.feedback.strengths.map((strength: string, index: number) => (
-                                <Flex key={index} align="start">
-                                  <Icon as={FiCheckCircle} color="green.500" mt={1} mr={3} />
-                                  <Text>{strength}</Text>
-                                </Flex>
-                              ))}
-                            </VStack>
-                          </Box>
-                          
-                          <Box mb={8} bg="orange.50" p={5} borderRadius="lg" borderLeft="4px solid" borderLeftColor="orange.500">
-                            <Heading size="sm" mb={3} color="orange.700">Areas for Improvement</Heading>
-                            <VStack align="stretch" spacing={3}>
-                              {analysisResults.feedback.improvements.map((improvement: string, index: number) => (
-                                <Flex key={index} align="start">
-                                  <Icon as={FiCheckCircle} color="orange.500" mt={1} mr={3} />
-                                  <Text>{improvement}</Text>
-                                </Flex>
-                              ))}
-                            </VStack>
-                          </Box>
-                          
-                          {analysisResults.rawAnalysis && (
-                            <Box mt={8} pt={6} borderTopWidth="1px">
-                              <Heading size="sm" mb={4}>Detailed Analysis</Heading>
-                              <Text whiteSpace="pre-wrap" fontSize="sm" color="gray.700">
-                                {analysisResults.rawAnalysis}
-                              </Text>
-                            </Box>
-                          )}
+                          {renderAnalysisResults()}
                         </Box>
                         
                         <HStack justify="center" spacing={4}>
@@ -676,19 +754,37 @@ const ResumeBuilder = ({ initialTabIndex = 0 }: ResumeBuilderProps) => {
                           >
                             Create Improved Resume
                           </Button>
-                          <Button
-                            variant="outline"
-                            colorScheme="teal"
-                            onClick={() => analyzeResumeWithType('ats-check')}
-                            boxShadow="sm"
-                            _hover={{
-                              transform: 'translateY(-2px)',
-                              boxShadow: 'md',
-                            }}
-                            transition="all 0.2s"
-                          >
-                            Get ATS Check
-                          </Button>
+                          {lastCompletedAnalysisType === 'ai-check' ? (
+                            <Button
+                              variant="outline"
+                              colorScheme="teal"
+                              onClick={() => analyzeResumeWithType('ats-check')}
+                              boxShadow="sm"
+                              _hover={{
+                                transform: 'translateY(-2px)',
+                                boxShadow: 'md',
+                              }}
+                              transition="all 0.2s"
+                              leftIcon={<Icon as={FiFileText} />}
+                            >
+                              Get ATS Check
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              colorScheme="purple"
+                              onClick={() => analyzeResumeWithType('ai-check')}
+                              boxShadow="sm"
+                              _hover={{
+                                transform: 'translateY(-2px)',
+                                boxShadow: 'md',
+                              }}
+                              transition="all 0.2s"
+                              leftIcon={<Icon as={FiCheckCircle} />}
+                            >
+                              Get AI Check
+                            </Button>
+                          )}
                         </HStack>
                       </VStack>
                     </CardBody>

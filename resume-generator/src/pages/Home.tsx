@@ -155,6 +155,7 @@ const Home = () => {
                 >
                   Get Started Now
                 </Button>
+                {/* Commenting out pricing button for MVP
                 <Button
                   size="lg"
                   variant="outline"
@@ -169,6 +170,7 @@ const Home = () => {
                 >
                   See Pricing
                 </Button>
+                */}
               </Stack>
             </Box>
 
@@ -230,7 +232,7 @@ const Home = () => {
                   opacity="0"
                 >
                   <Icon as={FiStar} color="yellow.500" />
-                  <Text fontWeight="medium">Premium Templates</Text>
+                  <Text fontWeight="medium">Templates</Text> {/* Changed from "Premium Templates" */}
                 </HStack>
               </Box>
             </Flex>
@@ -274,8 +276,8 @@ const Home = () => {
             />
             <Feature
               icon={FiUser}
-              title="Expert Analysis"
-              text="Get detailed feedback on how to improve your existing resume from our AI analysts."
+              title="Resume Analysis"
+              text="Get detailed feedback on how to improve your existing resume from our AI."
               iconColor="red.500"
               delay={0.7}
             />
@@ -296,8 +298,6 @@ const Home = () => {
           </SimpleGrid>
         </VStack>
       </Container>
-
-      {/* Testimonials or social proof section could go here */}
 
       {/* Call to Action */}
       <Box 
@@ -337,7 +337,8 @@ const Home = () => {
               Ready to Land Your Dream Job?
             </Heading>
             <Text fontSize="lg" textAlign="center" maxW="container.md" color="whiteAlpha.900">
-              Start building your professional resume today. No credit card required for basic features.
+              Start building your professional resume today.
+              {/* Removed: No credit card required for basic features. */}
             </Text>
             <Button
               as={MotionBox}
@@ -380,7 +381,7 @@ const Feature = ({ icon, title, text, iconColor, delay = 0 }: FeatureProps) => {
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-100px" }}
-      transition={{ duration: 0.5, delay }}
+      transition={{ duration: 0.5, delay } as any}
       align="start"
       p={6}
       borderWidth="1px"
@@ -389,11 +390,10 @@ const Feature = ({ icon, title, text, iconColor, delay = 0 }: FeatureProps) => {
       bg={cardBg}
       boxShadow="md"
       _hover={{ 
-        transform: 'translateY(-5px)', 
+        transform: 'translateY(-5px',
         boxShadow: 'lg',
         borderColor: 'brand.200'
       }}
-      transition="all 0.3s"
     >
       <Flex
         align="center"
