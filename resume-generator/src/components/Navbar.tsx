@@ -25,11 +25,23 @@ import {
   Divider,
   MenuDivider,
   Tooltip,
-  Image
+  Image,
+  Spinner
 } from '@chakra-ui/react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FiMenu, FiFileText, FiMail, FiUser, FiLogOut, FiHome, FiDollarSign, FiChevronDown } from 'react-icons/fi';
+import { 
+  FiMenu, 
+  FiFileText, 
+  FiMail, 
+  FiUser, 
+  FiLogOut, 
+  FiHome, 
+  FiDollarSign, 
+  FiChevronDown,
+  FiSettings,
+  FiHelpCircle 
+} from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import AuthModal from './Auth/AuthModal';
 import { useState, useEffect } from 'react';
@@ -40,10 +52,11 @@ const MotionFlex = motion(Flex);
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, signOut, isAuthenticated } = useAuth();
+  const { user, signOut, isAuthenticated, loading } = useAuth();
   const { isOpen: isAuthOpen, onOpen: onAuthOpen, onClose: onAuthClose } = useDisclosure();
   const { isOpen: isMenuOpen, onOpen: onMenuOpen, onClose: onMenuClose } = useDisclosure();
   const [scrolled, setScrolled] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   // Colors
   const bgColor = useColorModeValue('white', 'gray.900');
@@ -69,12 +82,29 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Check for stored redirect path after login
+  useEffect(() => {
+    if (isAuthenticated) {
+      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        sessionStorage.removeItem('redirectAfterLogin');
+        navigate(redirectPath);
+      }
+    }
+  }, [isAuthenticated, navigate]);
+
   const handleSignOut = async () => {
     try {
+      setLoggingOut(true);
       await signOut();
-      navigate('/');
+      // Force navigate to homepage after successful logout
+      navigate('/', { replace: true });
+      // Show success toast if needed
     } catch (error) {
       console.error('Error signing out:', error);
+      // Show error toast to user
+    } finally {
+      setLoggingOut(false);
     }
   };
 
@@ -165,7 +195,9 @@ const Navbar = () => {
 
             {/* Right side - auth buttons or user menu */}
             <HStack>
-              {isAuthenticated ? (
+              {loading ? (
+                <Spinner size="sm" color="brand.500" />
+              ) : isAuthenticated ? (
                 <Menu>
                   <MenuButton 
                     as={Button} 
@@ -220,13 +252,21 @@ const Navbar = () => {
                     >
                       My Cover Letters
                     </MenuItem>
+                    <MenuItem 
+                      icon={<FiSettings />} 
+                      onClick={() => navigate('/account-settings')}
+                      _hover={{ bg: hoverBgColor, color: activeColor }}
+                    >
+                      Account Settings
+                    </MenuItem>
                     <MenuDivider />
                     <MenuItem 
-                      icon={<FiLogOut />} 
+                      icon={loggingOut ? <Spinner size="sm" /> : <FiLogOut />} 
                       onClick={handleSignOut}
+                      isDisabled={loggingOut}
                       _hover={{ bg: hoverBgColor, color: "red.500" }}
                     >
-                      Sign Out
+                      {loggingOut ? 'Signing Out...' : 'Sign Out'}
                     </MenuItem>
                   </MenuList>
                 </Menu>
@@ -344,6 +384,18 @@ const Navbar = () => {
                 Pricing
               </Button>
               
+              <Button 
+                leftIcon={<FiHelpCircle />} 
+                justifyContent="flex-start" 
+                variant="ghost"
+                isActive={isActive('/help')}
+                onClick={() => { navigate('/help'); onMenuClose(); }}
+                mb={1}
+                borderRadius="md"
+              >
+                Help & Support
+              </Button>
+
               {isAuthenticated && (
                 <>
                   <Divider my={2} />
@@ -360,15 +412,19 @@ const Navbar = () => {
                   </Button>
                   
                   <Button 
-                    leftIcon={<FiLogOut />} 
+                    leftIcon={loggingOut ? <Spinner size="xs" /> : <FiLogOut />} 
                     justifyContent="flex-start" 
                     variant="ghost"
                     colorScheme="red"
-                    onClick={() => { handleSignOut(); onMenuClose(); }}
+                    onClick={async () => { 
+                      await handleSignOut(); 
+                      onMenuClose(); 
+                    }}
+                    isDisabled={loggingOut}
                     mt={4}
                     borderRadius="md"
                   >
-                    Sign Out
+                    {loggingOut ? 'Signing Out...' : 'Sign Out'}
                   </Button>
                 </>
               )}
