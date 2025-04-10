@@ -109,46 +109,137 @@ const errorHandler: express.ErrorRequestHandler = (err, req, res, next) => {
   return res.status(statusCode).json({ error: message });
 };
 
+// Helper function to extract and handle ATS check response
+function handleATSCheckResponse(analysisResult: string, extractedText: string, res: express.Response) {
+  try {
+    // Try to parse the JSON response if it's in JSON format
+    let parsedResult;
+    try {
+      parsedResult = JSON.parse(analysisResult);
+    } catch (parseError) {
+      console.log('Response is not in JSON format, using text response');
+      // Return the text response if it's not valid JSON
+      return res.json({
+        success: true,
+        analysis: analysisResult,
+        extractedText: extractedText
+      });
+    }
+    
+    // If we have a properly structured JSON response
+    return res.json({
+      success: true,
+      analysis: parsedResult,
+      extractedText: extractedText
+    });
+  } catch (error) {
+    console.error('Error processing ATS check response:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to process ATS check response',
+      extractedText: extractedText
+    });
+  }
+}
+
+// Helper function to extract and handle AI check response
+function handleAICheckResponse(analysisResult: string, extractedText: string, res: express.Response) {
+  try {
+    // Try to parse the JSON response if it's in JSON format
+    let parsedResult;
+    try {
+      parsedResult = JSON.parse(analysisResult);
+    } catch (parseError) {
+      console.log('Response is not in JSON format, using text response');
+      // Return the text response if it's not valid JSON
+      return res.json({
+        success: true,
+        analysis: analysisResult,
+        extractedText: extractedText
+      });
+    }
+    
+    // If we have a properly structured JSON response
+    return res.json({
+      success: true,
+      analysis: parsedResult,
+      extractedText: extractedText
+    });
+  } catch (error) {
+    console.error('Error processing AI check response:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to process AI check response',
+      extractedText: extractedText
+    });
+  }
+}
+
 // API endpoints
 app.post('/api/analyze-resume', upload.single('resume'), async (req, res, next) => {
   try {
     console.log('Received analyze-resume request:', {
       hasFile: !!req.file,
-      body: req.body,
+      bodyKeys: Object.keys(req.body),
       contentType: req.headers['content-type']
     });
     
+    // For debugging - log full request body to see what's coming in
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    
     const analysisType = req.body.analysisType || req.body.type || 'ai-check';
+    console.log(`Processing analysis type: ${analysisType}`);
+    
     let extractedText = '';
     let resumeDataForAnalysis: any = null;
-
-    console.log(`Processing resume analysis request of type: ${analysisType}`);
 
     if (req.file) {
       // Handle file upload case
       const filePath = req.file.path;
       console.log(`File uploaded: ${filePath}`);
-      extractedText = await extractTextFromPdf(filePath);
-      await fsPromises.unlink(filePath); // Use fsPromises here
-
-      if (!extractedText || extractedText.trim().length === 0) {
+      try {
+        extractedText = await extractTextFromPdf(filePath);
+        console.log(`Extracted ${extractedText.length} characters from PDF`);
+        await fsPromises.unlink(filePath);
+        
+        if (!extractedText || extractedText.trim().length === 0) {
+          return res.status(400).json({ 
+            success: false,
+            error: 'Could not extract text from the uploaded PDF. It may be image-based or scanned.' 
+          });
+        }
+      } catch (extractError) {
+        console.error('Error extracting text from PDF:', extractError);
         return res.status(400).json({ 
           success: false,
-          error: 'Could not extract text from the uploaded PDF. It may be image-based or scanned.' 
+          error: 'Failed to extract text from the PDF. Make sure it is a valid, text-based PDF.' 
         });
       }
-      resumeDataForAnalysis = extractedText; // Use extracted text for analysis
-    } else if (req.body.resumeData) {
-      // Handle JSON data case (no file upload)
-      console.log('Processing JSON resume data', typeof req.body.resumeData);
+      resumeDataForAnalysis = extractedText;
+    } else if (req.body && (req.body.resumeData || req.body.resume)) {
+      // Handle various forms of resume data in the request body
+      const resumeData = req.body.resumeData || req.body.resume;
+      console.log('Processing resume data from body:', typeof resumeData);
+      
       // Make sure resumeDataForAnalysis is a string for proper prompt formatting
-      resumeDataForAnalysis = typeof req.body.resumeData === 'string' 
-        ? req.body.resumeData 
-        : JSON.stringify(req.body.resumeData, null, 2);
+      if (resumeData) {
+        resumeDataForAnalysis = typeof resumeData === 'string' 
+          ? resumeData 
+          : JSON.stringify(resumeData, null, 2);
+        
+        console.log(`Processed resume data length: ${resumeDataForAnalysis.length}`);
+      } else {
+        console.error('Resume data is undefined or null');
+      }
     } else {
+      console.error('No resume data found in request. Body keys:', Object.keys(req.body));
       return res.status(400).json({ 
         success: false,
-        error: 'No resume file uploaded or resume data provided in the request body' 
+        error: 'No resume file uploaded or resume data provided in the request body',
+        receivedData: {
+          contentType: req.headers['content-type'],
+          bodyKeys: Object.keys(req.body)
+        }
       });
     }
 
@@ -156,129 +247,128 @@ app.post('/api/analyze-resume', upload.single('resume'), async (req, res, next) 
     let prompt = '';
     let systemPrompt = "You are a professional resume analyst specialized in helping job seekers improve their resumes.";
     let responseFormat = { type: "text" }; // Default response format
+    let model = "llama3-8b-8192"; // Default model
 
-    switch (analysisType) {
-      case 'ai-check':
-        systemPrompt = "You are an expert resume reviewer. Your task is to provide detailed feedback on a resume including strengths, weaknesses, specific recommendations, formatting feedback, and an overall assessment. Score the resume out of 100. Format your response as a properly structured JSON object.";
-        prompt = `
-Please analyze this resume and provide comprehensive feedback.
-
-Resume data:
+    try {
+      // Generate prompt based on analysis type
+      switch(analysisType) {
+        case 'ats-check':
+          systemPrompt = "You are an ATS (Applicant Tracking System) expert who analyzes resumes for compatibility with automated screening systems.";
+          prompt = `Analyze this resume for ATS compatibility:
+          
 ${resumeDataForAnalysis}
 
-Format your response as a JSON object with the following structure:
+Provide the following in JSON format:
 {
-  "score": <number 0-100>,
-  "strengths": ["<strength 1>", "<strength 2>", ...],
-  "weaknesses": ["<weakness 1>", "<weakness 2>", ...],
-  "recommendations": ["<recommendation 1>", "<recommendation 2>", ...],
-  "formattingFeedback": "<feedback on resume formatting and structure>",
-  "overallAssessment": "<overall assessment paragraph>"
-}
-`;
-        responseFormat = { type: "json_object" };
-        break;
-      // ... other cases remain unchanged ...
-    }
+  "atsScore": 0-100 score for ATS compatibility,
+  "keywordMatches": ["list", "of", "good", "keywords", "found"],
+  "missingKeywords": ["list", "of", "potentially", "missing", "important", "keywords"],
+  "formatIssues": ["list", "of", "formatting", "issues"],
+  "atsImprovements": ["prioritized", "list", "of", "suggested", "improvements"],
+  "overallATSAssessment": "brief overall assessment"
+}`;
+          responseFormat = { type: "json_object" };
+          model = "llama3-8b-8192";
+          break;
+          
+        case 'ai-check':
+          systemPrompt = "You are a professional resume reviewer with years of experience helping job seekers perfect their resumes.";
+          prompt = `Analyze this resume in detail and provide comprehensive feedback:
+          
+${resumeDataForAnalysis}
 
-    console.log('Sending request to Groq API...');
-    console.log('System prompt:', systemPrompt);
-    console.log('User prompt (excerpt):', prompt.substring(0, 100) + '...');
-    
-    try {
-      // Send to Groq API
-      const groqClient = getGroqClient();
-      const completion = await groqClient.chat.completions.create({
-        model: "llama3-8b-8192",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: prompt }
-        ],
-        temperature: analysisType === 'ai-check' ? 0.2 : 0.7, // Lower temp for JSON output
-        response_format: responseFormat,
-      });
+Provide the following in JSON format:
+{
+  "score": 0-100 overall resume score,
+  "strengths": ["list", "of", "key", "strengths"],
+  "weaknesses": ["list", "of", "areas", "for", "improvement"],
+  "recommendations": ["specific", "recommendations", "for", "improvement"],
+  "formattingFeedback": "feedback on layout, organization, and visual appeal",
+  "overallAssessment": "brief overall assessment"
+}`;
+          responseFormat = { type: "json_object" };
+          model = "llama3-8b-8192";
+          break;
+          
+        case 'job-match':
+          systemPrompt = "You are a skilled job application specialist who helps candidates optimize their resumes for specific job descriptions.";
+          prompt = `Analyze this resume for job description match:
+          
+Resume:
+${resumeDataForAnalysis}
 
-      console.log('Received response from Groq API');
-      
-      let analysisResult = completion.choices[0].message.content;
-      console.log('Raw response:', typeof analysisResult, analysisResult ? analysisResult.substring(0, 100) + '...' : 'empty');
+Job Description:
+${req.body.jobDescription || "No job description provided. Perform a general analysis."}
 
-      // Handle JSON formatting for ai-check specifically
-      if (analysisType === 'ai-check') {
-        try {
-          // If it's already a string, parse it to object
-          let analysisObject: Record<string, any> = {};
+Return your analysis in JSON format.`;
+          responseFormat = { type: "json_object" };
+          model = "llama3-8b-8192";
+          break;
           
-          if (typeof analysisResult === 'string') {
-            analysisObject = JSON.parse(analysisResult);
-          } else {
-            analysisObject = analysisResult as Record<string, any>;
-          }
+        default:
+          prompt = `Analyze this resume in detail and provide comprehensive feedback:
           
-          // Validate the required fields exist
-          const requiredFields = ['score', 'strengths', 'weaknesses', 'recommendations'];
-          const missingFields = requiredFields.filter(field => !analysisObject[field]);
-          
-          if (missingFields.length > 0) {
-            console.warn(`Response missing required fields: ${missingFields.join(', ')}`);
-            
-            // Add default values for missing fields
-            missingFields.forEach(field => {
-              if (field === 'score') {
-                analysisObject['score'] = 70; // Default score
-              } else {
-                analysisObject[field] = [`No ${field} provided in analysis`];
-              }
-            });
-          }
-          
-          // Return the analysis with any fixes applied
-          console.log('Sending validated analysis response');
-          return res.json({
-            success: true,
-            analysis: analysisObject,
-            extractedText: extractedText
-          });
-        } catch (parseError: unknown) {
-          const errorMessage = parseError instanceof Error ? parseError.message : 'Unknown parsing error';
-          console.error('Failed to parse or validate LLM response:', errorMessage);
-          
-          if (typeof analysisResult === 'string') {
-            console.error('Raw response causing error:', analysisResult.substring(0, 200) + '...');
-          }
-          
-          // Return a fallback error response
-          return res.status(500).json({
-            success: false,
-            error: 'Failed to parse AI analysis response',
-            details: errorMessage
-          });
-        }
+${resumeDataForAnalysis}
+
+Focus on clarity, impact, organization, and effectiveness. Provide both strengths and areas for improvement.`;
+          break;
       }
 
-      // For other types, return the raw analysis
-      return res.json({
-        success: true,
-        analysis: analysisResult,
-        extractedText: extractedText
-      });
-    } catch (apiError: unknown) {
-      const errorMessage = apiError instanceof Error ? apiError.message : 'Unknown API error';
-      console.error('Groq API error:', errorMessage);
+      console.log(`Sending request to Groq API for ${analysisType} analysis...`);
       
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Failed to get analysis from AI service', 
-        details: errorMessage
-      });
+      // Send to Groq API
+      try {
+        const groqClient = getGroqClient();
+        
+        const completion = await groqClient.chat.completions.create({
+          model: model,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: prompt }
+          ],
+          temperature: analysisType === 'ai-check' ? 0.2 : 0.7,
+          response_format: responseFormat,
+        });
+
+        console.log('Received response from Groq API');
+        
+        const groqResponse = completion as any;
+        let analysisResult = groqResponse.choices[0].message.content;
+        console.log('Raw response:', typeof analysisResult);
+        
+        // Process based on analysis type
+        if (analysisType === 'ats-check') {
+          return handleATSCheckResponse(analysisResult, extractedText, res);
+        } else if (analysisType === 'ai-check') {
+          return handleAICheckResponse(analysisResult, extractedText, res);
+        } else {
+          // For other types, return the raw analysis
+          return res.json({
+            success: true,
+            analysis: analysisResult,
+            extractedText: extractedText
+          });
+        }
+      } catch (apiError: unknown) {
+        console.error('API error during analysis:', apiError);
+        const errorMessage = apiError instanceof Error ? apiError.message : 'Unknown API error';
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Failed to get analysis from AI service', 
+          details: errorMessage
+        });
+      }
+    } catch (error: any) {
+      console.error('General error in analyze-resume:', error);
+      next(error);
     }
   } catch (error: any) {
-    console.error('General error in analyze-resume:', error);
-    next(error); // Pass error to the generic error handler
+    console.error('Unexpected error in analyze-resume route:', error);
+    next(error);
   }
 });
 
-app.post('/api/generate-resume', bodyParser.json(), async (req, res, next) => {
+app.post('/api/generate-resume', async (req, res, next) => {
   try {
     const resumeData = req.body;
     
@@ -476,45 +566,12 @@ app.get('/api/health', (req, res) => {
 // Use the error handling middleware
 app.use(errorHandler);
 
-// Update the server startup logic to try alternative ports
-const startServer = async (initialPort: number = 5000, maxAttempts: number = 5) => {
-  let currentPort = initialPort;
-  let attempts = 0;
+// Get the port from environment variable or use default
+const PORT = process.env.PORT || 5000;
 
-  while (attempts < maxAttempts) {
-    try {
-      const server = app.listen(currentPort, () => {
-        console.log(`Server running on port ${currentPort}`);
-      });
-
-      server.on('listening', () => {
-        // Save the successful port to a file that the frontend can read
-        try {
-          fs.writeFileSync('./.port', currentPort.toString()); // Use imported fs here
-          console.log(`Port ${currentPort} saved to ./.port`);
-        } catch (writeError) {
-          console.error('Error writing port file:', writeError);
-        }
-      });
-      
-      return; // Successfully started
-    } catch (error: any) {
-      if (error.code === 'EADDRINUSE') {
-        console.log(`Port ${currentPort} is already in use, trying port ${currentPort + 1}...`);
-        currentPort++;
-        attempts++;
-      } else {
-        console.error('Error starting server:', error);
-        throw error; // Rethrow if it's not a port conflict
-      }
-    }
-  }
-  
-  console.error(`Could not find an available port after ${maxAttempts} attempts`);
-  process.exit(1);
-};
-
-// Replace your current app.listen call with this
-startServer();
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
 
 export default app;

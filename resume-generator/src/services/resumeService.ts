@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config/apiConfig';
 
 /**
  * Service for resume analysis and processing
@@ -8,10 +9,13 @@ import axios from 'axios';
 const getApiUrl = () => {
   // Try to use the environment variable first
   if (import.meta.env && import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+    const baseUrl = import.meta.env.VITE_API_URL;
+    
+    // Clean up the URL to avoid duplicate /api segments
+    return baseUrl.replace(/\/api\/?$/, '');
   }
   
-  // Fallback to default endpoint
+  // Fallback to default endpoint without /api suffix
   return 'http://localhost:5000';
 };
 
@@ -35,6 +39,8 @@ export interface ResumeAnalysisResponse {
 export async function analyzeResume(data: File | any, type: string): Promise<ResumeAnalysisResponse> {
   try {
     const endpoint = `${API_URL}/api/analyze-resume`;
+    console.log(`Attempting to send request to: ${endpoint}`);
+    
     let response;
 
     if (data instanceof File) {
@@ -48,11 +54,39 @@ export async function analyzeResume(data: File | any, type: string): Promise<Res
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 60000, // 60 seconds timeout
       });
     } else {
-      // Handle JSON data
+      // Handle JSON data - ensure we're sending it in a way the backend can understand
       console.log(`Sending analysis request (JSON) to ${endpoint} with type: ${type}`);
-      response = await axios.post(endpoint, { resumeData: data, type });
+      
+      // Create a properly formatted request object
+      let requestData;
+      
+      if (typeof data === 'string') {
+        // If data is a string (like extracted text), don't stringify it again
+        requestData = {
+          resumeData: data,
+          analysisType: type
+        };
+      } else {
+        // For object data, stringify it
+        requestData = {
+          resumeData: JSON.stringify(data),
+          analysisType: type
+        };
+      }
+      
+      console.log('Content type:', typeof requestData.resumeData);
+      console.log('Data length:', requestData.resumeData.length);
+      
+      // Send the request
+      response = await axios.post(endpoint, requestData, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 60000 // 60 seconds timeout
+      });
     }
 
     console.log("Analysis response received:", response.data);
@@ -67,11 +101,23 @@ export async function analyzeResume(data: File | any, type: string): Promise<Res
     if (error.response) {
       // The request was made and the server responded with an error status
       console.error("Server error response:", error.response.data);
-      errorMsg = error.response.data?.error || "Server returned an error response";
+      
+      // For 404 errors, provide specific information about the URL issue
+      if (error.response.status === 404) {
+        errorMsg = `Server returned an error (404): "${error.response.data}". Please try again or contact support.`;
+      } else {
+        errorMsg = error.response.data?.error || `Server returned an error (${error.response.status})`;
+      }
+      
+      // For debugging - log more details about the error
+      console.error("Error status:", error.response.status);
+      console.error("Error headers:", error.response.headers);
+      console.error("Request URL:", error.config?.url);
+      console.error("Request method:", error.config?.method);
     } else if (error.request) {
       // The request was made but no response was received
       console.error("No response received from server");
-      errorMsg = "No response received from server";
+      errorMsg = "No response received from server. The server might be down or experiencing issues.";
     } else {
       // Something happened in setting up the request
       console.error("Request setup error:", error.message);
@@ -132,6 +178,31 @@ export const formatAnalysisResults = (analysis: any, analysisType: string): any 
       };
     } catch (error) {
       console.error("Error formatting AI check results:", error);
+      return {
+        ...defaultStructure,
+        rawAnalysis: typeof analysis === 'string' ? analysis : "Error parsing analysis"
+      };
+    }
+  } else if (analysisType === 'ats-check') {
+    try {
+      // Parse ATS check results
+      const analysisObj = typeof analysis === 'string' ? JSON.parse(analysis) : analysis;
+      
+      return {
+        score: analysisObj.atsScore || 0,
+        feedback: {
+          strengths: analysisObj.keywordMatches || [],
+          improvements: analysisObj.missingKeywords || []
+        },
+        formatIssues: analysisObj.formatIssues || [], 
+        atsImprovements: analysisObj.atsImprovements || [],
+        overallAssessment: analysisObj.overallATSAssessment || "",
+        keywordMatches: analysisObj.keywordMatches || [],
+        missingKeywords: analysisObj.missingKeywords || [],
+        rawAnalysis: typeof analysisObj === 'object' ? JSON.stringify(analysisObj, null, 2) : analysisObj
+      };
+    } catch (error) {
+      console.error("Error formatting ATS check results:", error);
       return {
         ...defaultStructure,
         rawAnalysis: typeof analysis === 'string' ? analysis : "Error parsing analysis"
