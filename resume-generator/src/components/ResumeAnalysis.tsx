@@ -17,6 +17,8 @@ import {
   ModalCloseButton,
   Spinner,
   useDisclosure,
+  Flex,
+  Heading,
 } from '@chakra-ui/react';
 import {
   FiCheckCircle,
@@ -26,6 +28,7 @@ import {
   FiEdit2,
   FiMail,
   FiLock,
+  FiBarChart2,
 } from 'react-icons/fi';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -36,6 +39,7 @@ interface AnalysisOption {
   icon: any;
   isPremium: boolean;
   onClick: () => void;
+  highlight?: boolean;
 }
 
 interface ResumeAnalysisProps {
@@ -59,20 +63,21 @@ const ResumeAnalysis: React.FC<ResumeAnalysisProps> = ({ onAnalysisSelect, isAna
       onClick: () => onAnalysisSelect('ai-check'),
     },
     {
+      id: 'ats-check',
+      title: 'ATS Compatibility Check',
+      description: 'Check how your resume performs in Applicant Tracking Systems and get keyword analysis',
+      icon: FiBarChart2,
+      isPremium: false,
+      onClick: () => onAnalysisSelect('ats-check'),
+      highlight: true,
+    },
+    {
       id: 'report',
       title: 'Detailed Report',
       description: 'Receive a comprehensive analysis of your resume',
       icon: FiFileText,
       isPremium: true,
       onClick: () => onAnalysisSelect('report'),
-    },
-    {
-      id: 'ats-check',
-      title: 'ATS Check',
-      description: 'Check how well your resume performs in ATS systems',
-      icon: FiSearch,
-      isPremium: false,
-      onClick: () => onAnalysisSelect('ats-check'),
     },
     {
       id: 'ats-score',
@@ -111,9 +116,13 @@ const ResumeAnalysis: React.FC<ResumeAnalysisProps> = ({ onAnalysisSelect, isAna
   return (
     <Box p={6} bg={bgColor} borderWidth="1px" borderColor={borderColor} borderRadius="lg">
       <VStack spacing={6} align="stretch">
-        <Text fontSize="xl" fontWeight="bold">
+        <Heading as="h3" size="md" mb={2}>
           Resume Analysis Options
+        </Heading>
+        <Text mb={4} color="gray.600">
+          Select an analysis type to get detailed insights about your resume
         </Text>
+        
         <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
           {analysisOptions.map((option) => (
             <Tooltip
@@ -123,16 +132,17 @@ const ResumeAnalysis: React.FC<ResumeAnalysisProps> = ({ onAnalysisSelect, isAna
               isDisabled={!option.isPremium}
             >
               <Box
-                p={4}
+                p={5}
                 borderWidth="1px"
-                borderColor={borderColor}
+                borderColor={option.highlight ? "teal.300" : borderColor}
                 borderRadius="md"
                 cursor="pointer"
-                _hover={{ shadow: 'md' }}
+                _hover={{ shadow: 'md', borderColor: option.highlight ? "teal.400" : "brand.300" }}
                 onClick={() => !isAnalyzing && handleOptionClick(option)}
                 opacity={isAnalyzing ? 0.7 : 1}
                 transition="all 0.2s"
                 position="relative"
+                bg={option.highlight ? "teal.50" : "transparent"}
               >
                 <VStack spacing={3} align="start" position="relative">
                   {isAnalyzing && option.id === 'ai-check' && (
@@ -152,10 +162,36 @@ const ResumeAnalysis: React.FC<ResumeAnalysisProps> = ({ onAnalysisSelect, isAna
                       <Spinner size="xl" color="blue.500" />
                     </Box>
                   )}
+                  
+                  {isAnalyzing && option.id === 'ats-check' && (
+                    <Box
+                      position="absolute"
+                      top={0}
+                      left={0}
+                      right={0}
+                      bottom={0}
+                      bg="rgba(255, 255, 255, 0.8)"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      borderRadius="md"
+                      zIndex={2}
+                    >
+                      <Spinner size="xl" color="teal.500" />
+                    </Box>
+                  )}
+                  
                   <Box display="flex" alignItems="center" justifyContent="space-between" w="100%">
-                    <Icon as={option.icon} boxSize={6} color="blue.500" />
+                    <Icon 
+                      as={option.icon} 
+                      boxSize={6} 
+                      color={option.highlight ? "teal.500" : "blue.500"} 
+                    />
                     {option.isPremium && (
                       <Badge colorScheme="purple">Premium</Badge>
+                    )}
+                    {option.highlight && !option.isPremium && (
+                      <Badge colorScheme="teal">Recommended</Badge>
                     )}
                   </Box>
                   <Text fontWeight="semibold">{option.title}</Text>
